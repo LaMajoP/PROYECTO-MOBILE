@@ -146,4 +146,10 @@ A continuación se presentan los cinco criterios del proyecto, ajustados al alca
 
 ---
 
+## 🖌️ Figma del proyecto
+
+- [Link del Figma](https://www.figma.com/proto/eDQvLQ79xeKvJn3bxUwznV/mobile?node-id=1-60&t=fWsnQZHWEpicsV0B-1)
+
+---
+
 © 2025 GlobalLocker Marketplace. Todos los derechos reservados.
