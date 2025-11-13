@@ -49,17 +49,6 @@ Comprar en el extranjero suele ser complicado y costoso por:
 
 ---
 
-## ⚙️ Características principales del MVP (2 semanas)
-
-- 🔍 **Recomendador básico de casilleros:** usa datos predefinidos (mock) para mostrar la mejor opción.  
-- 💳 **Compra simulada:** flujo de compra sin pagos reales.  
-- 📦 **Seguimiento del pedido:** estados: *procesando → en tránsito → entregado*.  
-- 🧾 **Historial de compras:** visible por usuario.  
-- 👤 **Login y registro:** solo con correo electrónico (Supabase Auth).  
-- 📱 **Compatible con iOS y Android.**  
-
----
-
 ## 🎯 Público objetivo
 
 - Compradores frecuentes en tiendas internacionales (Amazon, eBay, Shein, etc.)  
