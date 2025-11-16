@@ -50,7 +50,6 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
           icon="mail-outline"
           keyboardType="email-address"
         />
-
         <IconInput
           placeholder="Enter your password"
           value={pass}
@@ -65,7 +64,9 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
             style={styles.remember}
           >
             <View style={[styles.checkbox, remember && styles.checkboxOn]}>
-              {remember && <MaterialIcons name="check" size={16} color="#fff" />}
+              {remember && (
+                <MaterialIcons name="check" size={16} color="#fff" />
+              )}
             </View>
             <Text style={styles.rememberText}>Remember me</Text>
           </Pressable>
@@ -76,7 +77,10 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
         </View>
 
         {/* Botón principal */}
-        <TouchableOpacity style={styles.primaryBtn}>
+        <TouchableOpacity
+          style={styles.primaryBtn}
+          onPress={() => navigation.replace("Home")} // 👈 aquí navegamos a Home
+        >
           <Text style={styles.primaryBtnText}>Log in</Text>
         </TouchableOpacity>
       </KeyboardAvoidingView>
@@ -87,7 +91,10 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
 export default LoginScreen;
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: BG },
+  safe: {
+    flex: 1,
+    backgroundColor: BG,
+  },
   container: {
     flex: 1,
     backgroundColor: BG,
@@ -103,14 +110,25 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     marginVertical: 24,
   },
-  title: { fontSize: 22, fontWeight: "700", color: TEXT },
-  subtitle: { color: MUTED, marginBottom: 4 },
+  title: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: TEXT,
+  },
+  subtitle: {
+    color: MUTED,
+    marginBottom: 4,
+  },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  remember: { flexDirection: "row", alignItems: "center", gap: 8 },
+  remember: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   checkbox: {
     width: 18,
     height: 18,
@@ -121,9 +139,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "#fff",
   },
-  checkboxOn: { backgroundColor: BLUE, borderColor: BLUE },
-  rememberText: { color: "#2F3C4B" },
-  link: { color: BLUE, fontWeight: "600" },
+  checkboxOn: {
+    backgroundColor: BLUE,
+    borderColor: BLUE,
+  },
+  rememberText: {
+    color: "#2F3C4B",
+  },
+  link: {
+    color: BLUE,
+    fontWeight: "600",
+  },
   primaryBtn: {
     marginTop: 8,
     backgroundColor: BLUE,
@@ -131,5 +157,9 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: "center",
   },
-  primaryBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  primaryBtnText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+  },
 });
