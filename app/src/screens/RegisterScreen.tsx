@@ -68,7 +68,10 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
         />
 
         {/* Botón */}
-        <TouchableOpacity style={styles.primaryBtn}>
+        <TouchableOpacity
+          style={styles.primaryBtn}
+          onPress={() => navigation.replace("Home")}   // 👈 navega a Home
+        >
           <Text style={styles.primaryBtnText}>Sign up</Text>
         </TouchableOpacity>
       </KeyboardAvoidingView>
