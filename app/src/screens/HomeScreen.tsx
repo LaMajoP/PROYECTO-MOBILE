@@ -1,6 +1,4 @@
-// src/screens/HomeScreen.tsx
-
-import React from 'react';
+import React from "react";
 import {
   SafeAreaView,
   View,
@@ -10,54 +8,67 @@ import {
   ScrollView,
   FlatList,
   TouchableOpacity,
-} from 'react-native';
+} from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 type Product = {
   id: string;
+  name: string;
   price: string;
   rating: number; // 1 a 5
 };
 
-const FILTERS = ['Electronics', 'Home', 'Beauty & Health'];
+const FILTERS = ["Electronics", "Home", "Beauty & Health"];
 
 const PRODUCTS: Product[] = [
-  { id: '1', price: '19.118', rating: 2 },
-  { id: '2', price: '19.118', rating: 3 },
-  { id: '3', price: '71.756', rating: 1 },
-  { id: '4', price: '27.959', rating: 4 },
-  { id: '5', price: '12.235', rating: 3 },
+  { id: "1", name: "Cute Lamp", price: "19.118", rating: 2 },
+  { id: "2", name: "Stitch Plush Toy", price: "19.118", rating: 3 },
+  { id: "3", name: "Pink Bunny Pillow", price: "71.756", rating: 1 },
+  { id: "4", name: "Strawberry Blanket", price: "27.959", rating: 4 },
+  { id: "5", name: "Cat Mug", price: "12.235", rating: 3 },
 ];
 
 const renderStars = (rating: number) => {
-  const full = '★'.repeat(rating);
-  const empty = '☆'.repeat(5 - rating);
+  const full = "★".repeat(rating);
+  const empty = "☆".repeat(5 - rating);
   return full + empty;
 };
 
 const HomeScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* HEADER AZUL */}
+      {/* HEADER estilo general de la app */}
       <View style={styles.header}>
-        <View style={styles.searchContainer}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search"
-            placeholderTextColor="#9CA3AF"
-          />
+        {/* Search + Country pill */}
+        <View style={styles.headerRow}>
+          <View style={styles.searchContainer}>
+            <Ionicons
+              name="search-outline"
+              size={18}
+              color="#9CA3AF"
+              style={{ marginRight: 6 }}
+            />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search products"
+              placeholderTextColor="#9CA3AF"
+            />
+          </View>
+
+          <TouchableOpacity style={styles.countryButton}>
+            <Text style={styles.countryFlag}>🇨🇴</Text>
+            <Text style={styles.countryText}>COL</Text>
+            <Ionicons name="chevron-down" size={14} color="#1F2937" />
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.countryButton}>
-          <Text style={styles.countryFlag}>🇨🇴</Text>
-          <Text style={styles.countryText}>COL</Text>
-          <Text style={styles.countryArrow}>▾</Text>
-        </TouchableOpacity>
+        <Text style={styles.headerSubtitle}>Find products from any country</Text>
       </View>
 
-      {/* CONTENIDO SCROLLABLE */}
+      {/* CONTENIDO */}
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: 24 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}
       >
         {/* FILTROS */}
@@ -79,13 +90,22 @@ const HomeScreen: React.FC = () => {
           data={PRODUCTS}
           keyExtractor={(item) => item.id}
           numColumns={2}
-          scrollEnabled={false} // para que el ScrollView principal maneje el scroll
+          scrollEnabled={false} // Scroll lo maneja el ScrollView principal
           columnWrapperStyle={styles.productsRow}
           renderItem={({ item }) => (
             <View style={styles.productCard}>
-              {/* Aquí luego puedes poner <Image /> */}
-              <View style={styles.imagePlaceholder} />
+              {/* Imagen placeholder */}
+              <View style={styles.imagePlaceholder}>
+                <Ionicons
+                  name="image-outline"
+                  size={28}
+                  color="#9CA3AF"
+                />
+              </View>
 
+              <Text style={styles.productName} numberOfLines={2}>
+                {item.name}
+              </Text>
               <Text style={styles.priceText}>${item.price}</Text>
               <Text style={styles.starsText}>{renderStars(item.rating)}</Text>
             </View>
@@ -101,92 +121,130 @@ export default HomeScreen;
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#E5ECFF", // mismo fondo azulado que Wallet/Profile/History
   },
   header: {
-    backgroundColor: '#1D6FB5', // azul superior
-    flexDirection: 'row',
-    alignItems: 'center',
+    backgroundColor: "#1D6FB5",
     paddingHorizontal: 16,
-    paddingBottom: 12,
-    paddingTop: 12,
-    gap: 12,
+    paddingTop: 18,
+    paddingBottom: 18,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  headerSubtitle: {
+    marginTop: 8,
+    color: "#DBEAFE",
+    fontSize: 13,
   },
   searchContainer: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    justifyContent: 'center',
-    height: 40,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#EFF6FF",
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
   },
   searchInput: {
+    flex: 1,
     fontSize: 14,
-    color: '#111827',
+    color: "#111827",
   },
   countryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#EFF6FF",
+    borderRadius: 999,
     paddingHorizontal: 12,
-    height: 40,
-    gap: 4,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+    gap: 6,
   },
   countryFlag: {
-    fontSize: 18,
+    fontSize: 16,
   },
   countryText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
+    color: "#111827",
   },
-  countryArrow: {
-    fontSize: 12,
-  },
+
   content: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
+
+  // FILTROS
   filtersRow: {
-    marginTop: 12,
+    marginTop: 8,
   },
   filtersContent: {
-    paddingHorizontal: 12,
+    paddingRight: 4,
     gap: 8,
   },
   filterChip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: 999,
+    backgroundColor: "#EFF6FF",
     borderWidth: 1,
-    borderColor: '#111827',
+    borderColor: "#BFDBFE",
   },
   filterText: {
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: "500",
+    color: "#1D4ED8",
   },
+
+  // PRODUCTOS
   productsRow: {
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
+    justifyContent: "space-between",
     marginTop: 16,
   },
   productCard: {
-    width: '48%',
-    marginBottom: 20,
+    flex: 1,
+    marginHorizontal: 4,
+    marginBottom: 16,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 18,
+    padding: 10,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
   },
   imagePlaceholder: {
-    width: '100%',
-    aspectRatio: 1, // cuadrado
-    backgroundColor: '#E5E7EB',
-    borderRadius: 4,
+    width: "100%",
+    aspectRatio: 1,
+    borderRadius: 14,
+    backgroundColor: "#E5E7EB",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  productName: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#111827",
+    marginBottom: 2,
   },
   priceText: {
-    marginTop: 6,
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 2,
   },
   starsText: {
-    marginTop: 4,
-    fontSize: 14,
+    fontSize: 13,
+    color: "#F59E0B", // amarillo suave para estrellas
   },
 });

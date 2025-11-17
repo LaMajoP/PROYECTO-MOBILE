@@ -1,3 +1,5 @@
+// src/screens/RegisterScreen.tsx
+
 import React, { useState } from "react";
 import {
   SafeAreaView,
@@ -10,7 +12,7 @@ import {
 } from "react-native";
 import SegmentedAuth from "../components/SegmentedAuth";
 import IconInput from "../components/IconInput";
-import { BG, BLUE, MUTED, TEXT } from "../theme/colors";
+import { BLUE, MUTED, TEXT } from "../theme/colors";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types/navigation";
 
@@ -28,52 +30,58 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        {/* Logo */}
-        <View style={styles.logo} />
+        {/* HEADER azul, mismo estilo que Login */}
+        <View style={styles.header}>
+          <Text style={styles.appTitle}>GlobalLocker</Text>
+          <Text style={styles.headerTitle}>Create your account</Text>
+          <Text style={styles.headerSubtitle}>
+            Sign up to start exploring products worldwide
+          </Text>
+        </View>
 
-        <Text style={styles.title}>¡Welcome!</Text>
-        <Text style={styles.subtitle}>Create your account</Text>
+        {/* CARD blanca con el formulario de registro */}
+        <View style={styles.card}>
+          <SegmentedAuth
+            active="register"
+            onLeft={() => navigation.replace("Login")}
+            onRight={() => {}}
+          />
 
-        <SegmentedAuth
-          active="register"
-          onLeft={() => navigation.replace("Login")}
-          onRight={() => {}}
-        />
+          {/* Inputs */}
+          <IconInput
+            placeholder="Full name"
+            value={name}
+            onChangeText={setName}
+            icon="person-outline"
+          />
+          <IconInput
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
+            icon="mail-outline"
+            keyboardType="email-address"
+          />
+          <IconInput
+            placeholder="Password"
+            value={pass}
+            onChangeText={setPass}
+            secure
+          />
+          <IconInput
+            placeholder="Confirm password"
+            value={confirm}
+            onChangeText={setConfirm}
+            secure
+          />
 
-        {/* Inputs */}
-        <IconInput
-          placeholder="Full name"
-          value={name}
-          onChangeText={setName}
-          icon="person-outline"
-        />
-        <IconInput
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          icon="mail-outline"
-          keyboardType="email-address"
-        />
-        <IconInput
-          placeholder="Password"
-          value={pass}
-          onChangeText={setPass}
-          secure
-        />
-        <IconInput
-          placeholder="Confirm password"
-          value={confirm}
-          onChangeText={setConfirm}
-          secure
-        />
-
-        {/* Botón */}
-        <TouchableOpacity
-          style={styles.primaryBtn}
-          onPress={() => navigation.replace("Home")}   // 👈 navega a Home
-        >
-          <Text style={styles.primaryBtnText}>Sign up</Text>
-        </TouchableOpacity>
+          {/* Botón de registro */}
+          <TouchableOpacity
+            style={styles.primaryBtn}
+            onPress={() => navigation.replace("Home")}
+          >
+            <Text style={styles.primaryBtnText}>Sign up</Text>
+          </TouchableOpacity>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -82,30 +90,66 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
 export default RegisterScreen;
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: BG },
+  safe: {
+    flex: 1,
+    backgroundColor: "#E5ECFF", // mismo fondo azulado que el login
+  },
   container: {
     flex: 1,
-    backgroundColor: BG,
-    paddingHorizontal: 28,
-    paddingTop: 24,
+  },
+  header: {
+    backgroundColor: BLUE ?? "#1D6FB5",
+    paddingHorizontal: 24,
+    paddingTop: 26,
+    paddingBottom: 26,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+  },
+  appTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#DBEAFE",
+    marginBottom: 4,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#FFFFFF",
+  },
+  headerSubtitle: {
+    marginTop: 4,
+    color: "#DBEAFE",
+    fontSize: 13,
+  },
+  card: {
+    flex: 1,
+    marginTop: 16,
+    marginHorizontal: 16,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 24,
     gap: 14,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
-  logo: {
-    alignSelf: "center",
-    width: 200,
-    height: 70,
-    backgroundColor: BLUE,
-    borderRadius: 6,
-    marginVertical: 24,
-  },
-  title: { fontSize: 22, fontWeight: "700", color: TEXT },
-  subtitle: { color: MUTED, marginBottom: 4 },
   primaryBtn: {
-    marginTop: 8,
-    backgroundColor: BLUE,
+    marginTop: 4,
+    backgroundColor: BLUE ?? "#1D6FB5",
     paddingVertical: 12,
-    borderRadius: 22,
+    borderRadius: 999,
     alignItems: "center",
   },
-  primaryBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  primaryBtnText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  // (por si luego quieres usar TEXT/MUTED en otros textos)
+  title: { fontSize: 22, fontWeight: "700", color: TEXT },
+  subtitle: { color: MUTED, marginBottom: 4 },
 });

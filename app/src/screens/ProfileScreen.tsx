@@ -17,6 +17,7 @@ type ProfileOption = {
   icon: keyof typeof Ionicons.glyphMap;
 };
 
+// SIN settings/help, como pediste
 const PROFILE_OPTIONS: ProfileOption[] = [
   { id: "wishlist", title: "Wishlist", icon: "heart-outline" },
   { id: "orders", title: "Order history", icon: "bag-outline" },
@@ -33,14 +34,15 @@ const PROFILE_OPTIONS: ProfileOption[] = [
     title: "Change currency or country",
     icon: "cash-outline",
   },
-  { id: "settings", title: "Settings", icon: "settings-outline" },
-  { id: "help", title: "Help", icon: "help-circle-outline" },
 ];
 
 const ProfileScreen: React.FC = () => {
+  const userName = "User Name";
+  const userEmail = "user@email.com";
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* HEADER AZUL */}
+      {/* HEADER azul estilo Wallet */}
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <TouchableOpacity style={styles.backButton}>
@@ -49,66 +51,88 @@ const ProfileScreen: React.FC = () => {
 
           <Text style={styles.headerTitle}>My Profile</Text>
 
-          {/* espacio fantasma para centrar el título */}
           <View style={{ width: 24 }} />
         </View>
       </View>
 
+      {/* CONTENIDO */}
       <ScrollView
         style={styles.content}
         contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* AVATAR + NOMBRE */}
-        <View style={styles.profileRow}>
-          <View style={styles.avatarWrapper}>
+        {/* CARD DE PERFIL (match con tarjeta de saldo del Wallet) */}
+        <View style={styles.profileCard}>
+          <View style={styles.avatarSection}>
             <View style={styles.avatarCircle}>
-              {/* Avatar simple: ícono de usuario */}
-              <Ionicons name="person" size={52} color="#111827" />
+              <Ionicons name="person" size={40} color="#111827" />
             </View>
 
-            <View style={styles.editIconWrapper}>
-              <Ionicons name="pencil" size={16} color="#111827" />
-            </View>
+            <TouchableOpacity style={styles.editAvatarButton}>
+              <Ionicons name="pencil" size={14} color="#1D4ED8" />
+            </TouchableOpacity>
           </View>
 
-          <Text style={styles.userName}>User Name</Text>
+          <View style={styles.profileInfo}>
+            <Text style={styles.userName}>{userName}</Text>
+            <Text style={styles.userEmail}>{userEmail}</Text>
+
+            <View style={styles.chipsRow}>
+              <View style={styles.memberChip}>
+                <Ionicons
+                  name="sparkles-outline"
+                  size={14}
+                  color="#1D4ED8"
+                />
+                <Text style={styles.memberChipText}>Member</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity style={styles.editProfileBtn}>
+              <Text style={styles.editProfileText}>Edit profile</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* OPCIONES */}
-        <View style={styles.optionsContainer}>
-          {PROFILE_OPTIONS.map((opt) => (
-            <TouchableOpacity key={opt.id} style={styles.optionRow}>
-              <View style={styles.optionLeft}>
-                <Ionicons name={opt.icon} size={22} color="#111827" />
-                <Text style={styles.optionText}>{opt.title}</Text>
-              </View>
+        {/* CARD DE OPCIONES estilo “transactionsCard” */}
+        <View style={styles.optionsCard}>
+          {PROFILE_OPTIONS.map((opt, index) => (
+            <View key={opt.id}>
+              <TouchableOpacity style={styles.optionRow}>
+                <View style={styles.optionLeft}>
+                  <View style={styles.optionIconWrapper}>
+                    <Ionicons
+                      name={opt.icon}
+                      size={18}
+                      color="#1F2937"
+                    />
+                  </View>
+                  <Text style={styles.optionText}>{opt.title}</Text>
+                </View>
 
-              <Ionicons
-                name="chevron-forward"
-                size={20}
-                color="#6B7280"
-              />
-            </TouchableOpacity>
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color="#9CA3AF"
+                />
+              </TouchableOpacity>
+
+              {index < PROFILE_OPTIONS.length - 1 && (
+                <View style={styles.divider} />
+              )}
+            </View>
           ))}
         </View>
 
-        {/* LOG OUT */}
-        <TouchableOpacity style={styles.logoutRow}>
-          <View style={styles.optionLeft}>
-            <Ionicons
-              name="log-out-outline"
-              size={22}
-              color="#B91C1C"
-            />
-            <Text style={styles.logoutText}>Log out</Text>
-          </View>
-
+        {/* BOTÓN LOG OUT estilo pill rojo como en diseños modernos */}
+        <TouchableOpacity style={styles.logoutButton}>
           <Ionicons
-            name="chevron-forward"
+            name="log-out-outline"
             size={20}
             color="#B91C1C"
+            style={{ marginRight: 8 }}
           />
+          <Text style={styles.logoutText}>Log out</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -120,12 +144,12 @@ export default ProfileScreen;
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: "#E5ECFF", // mismo tipo de fondo azulado que Wallet
   },
   header: {
     backgroundColor: "#1D6FB5",
     paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingTop: 18,
     paddingBottom: 18,
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
@@ -149,64 +173,143 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  profileRow: {
+
+  // CARD PERFIL
+  profileCard: {
     flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  avatarWrapper: {
-    marginRight: 16,
-  },
-  avatarCircle: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
     backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 16,
+    marginTop: 16,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  avatarSection: {
+    marginRight: 16,
     alignItems: "center",
     justifyContent: "center",
   },
-  editIconWrapper: {
-    position: "absolute",
-    bottom: 4,
-    right: 4,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#111827",
+  avatarCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "#EFF6FF",
     alignItems: "center",
+    justifyContent: "center",
+  },
+  editAvatarButton: {
+    position: "absolute",
+    bottom: -2,
+    right: -2,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#DBEAFE",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+  },
+  profileInfo: {
+    flex: 1,
     justifyContent: "center",
   },
   userName: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "700",
     color: "#111827",
   },
-  optionsContainer: {
-    backgroundColor: "#F3F4F6",
+  userEmail: {
+    fontSize: 13,
+    color: "#6B7280",
+    marginTop: 2,
+  },
+  chipsRow: {
+    flexDirection: "row",
+    marginTop: 8,
+  },
+  memberChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#EFF6FF",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  memberChipText: {
+    fontSize: 12,
+    marginLeft: 4,
+    color: "#1D4ED8",
+    fontWeight: "500",
+  },
+  editProfileBtn: {
+    marginTop: 10,
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#1D4ED8",
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+  },
+  editProfileText: {
+    color: "#1D4ED8",
+    fontWeight: "600",
+    fontSize: 13,
+  },
+
+  // CARD OPCIONES
+  optionsCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
   },
   optionRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 12,
+    paddingVertical: 10,
   },
   optionLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+  },
+  optionIconWrapper: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "#EFF6FF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
   },
   optionText: {
     fontSize: 15,
     color: "#111827",
   },
-  logoutRow: {
-    marginTop: 16,
-    flexDirection: "row",
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: "#E5E7EB",
+  },
+
+  // LOG OUT
+  logoutButton: {
+    marginTop: 20,
+    backgroundColor: "#FEF2F2",
+    borderRadius: 999,
+    paddingVertical: 10,
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 12,
+    justifyContent: "center",
+    flexDirection: "row",
   },
   logoutText: {
     fontSize: 15,

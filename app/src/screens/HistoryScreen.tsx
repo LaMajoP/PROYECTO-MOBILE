@@ -1,6 +1,4 @@
-// src/screens/HistoryScreen.tsx
-
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   SafeAreaView,
   View,
@@ -9,6 +7,7 @@ import {
   ScrollView,
   TouchableOpacity,
 } from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 type CartItem = {
   id: string;
@@ -41,9 +40,14 @@ const INITIAL_CART: CartItem[] = [
 const HistoryScreen: React.FC = () => {
   const [cart, setCart] = useState<CartItem[]>(INITIAL_CART);
 
-  // número total de ítems (sumando cantidades)
   const itemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const subtitle = itemsCount === 1 ? "1 item" : `${itemsCount} items`;
+  const subtitle = itemsCount === 1 ? "1 item in your cart" : `${itemsCount} items in your cart`;
+
+  const totalAmount = useMemo(
+    () =>
+      cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
+    [cart]
+  );
 
   const handleChangeQuantity = (id: string, delta: 1 | -1) => {
     setCart((prev) =>
@@ -55,23 +59,19 @@ const HistoryScreen: React.FC = () => {
     );
   };
 
-  const formatPrice = (value: number) => {
-    // 19.118, 27.959, etc.
-    return value.toFixed(3);
-  };
+  const formatPrice = (value: number) => value.toFixed(3);
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* HEADER AZUL */}
+      {/* HEADER estilo Wallet/Profile */}
       <View style={styles.header}>
-        <View style={styles.headerTopRow}>
+        <View style={styles.headerRow}>
           <TouchableOpacity style={styles.backButton}>
-            <Text style={styles.backArrow}>‹</Text>
+            <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
 
           <Text style={styles.headerTitle}>Shopping Cart</Text>
 
-          {/* Espacio para centrar el título */}
           <View style={{ width: 24 }} />
         </View>
 
@@ -81,53 +81,81 @@ const HistoryScreen: React.FC = () => {
       {/* CONTENIDO */}
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}
       >
-        {cart.map((item) => {
-          const totalPrice = item.unitPrice * item.quantity;
+        {/* RESUMEN TOTAL */}
+        <View style={styles.summaryCard}>
+          <View style={styles.summaryLeft}>
+            <View style={styles.summaryIconWrapper}>
+              <Ionicons name="cart-outline" size={22} color="#EFF6FF" />
+            </View>
+            <View>
+              <Text style={styles.summaryLabel}>Total</Text>
+              <Text style={styles.summaryHint}>Including all items</Text>
+            </View>
+          </View>
 
-          return (
-            <View key={item.id} style={styles.itemRow}>
-              {/* Imagen del producto (placeholder) */}
-              <View style={styles.imagePlaceholder} />
+          <Text style={styles.summaryAmount}>${formatPrice(totalAmount)}</Text>
+        </View>
 
-              {/* Info del producto */}
-              <View style={styles.itemInfo}>
-                <Text style={styles.itemName}>{item.name}</Text>
+        {/* ITEMS DEL CARRITO */}
+        <View style={styles.itemsContainer}>
+          {cart.map((item) => {
+            const totalPrice = item.unitPrice * item.quantity;
 
-                {/* Precio total = unitPrice x quantity */}
-                <Text style={styles.itemPrice}>${formatPrice(totalPrice)}</Text>
+            return (
+              <View key={item.id} style={styles.itemCard}>
+                {/* Imagen placeholder */}
+                <View style={styles.imagePlaceholder} />
 
-                {/* Controles de cantidad */}
-                <View style={styles.qtyRow}>
-                  <TouchableOpacity
-                    style={styles.qtyBox}
-                    onPress={() => handleChangeQuantity(item.id, -1)}
-                  >
-                    <Text style={styles.qtyText}>−</Text>
-                  </TouchableOpacity>
+                {/* Info del producto */}
+                <View style={styles.itemInfo}>
+                  <Text style={styles.itemName}>{item.name}</Text>
+                  <Text style={styles.itemPrice}>
+                    ${formatPrice(totalPrice)}
+                  </Text>
 
-                  <View style={styles.qtyBox}>
-                    <Text style={styles.qtyText}>{item.quantity}</Text>
+                  {/* Controles de cantidad */}
+                  <View style={styles.qtyRow}>
+                    <TouchableOpacity
+                      style={styles.qtyButton}
+                      onPress={() => handleChangeQuantity(item.id, -1)}
+                    >
+                      <Text style={styles.qtyButtonText}>−</Text>
+                    </TouchableOpacity>
+
+                    <View style={styles.qtyValueBox}>
+                      <Text style={styles.qtyValueText}>{item.quantity}</Text>
+                    </View>
+
+                    <TouchableOpacity
+                      style={styles.qtyButton}
+                      onPress={() => handleChangeQuantity(item.id, +1)}
+                    >
+                      <Text style={styles.qtyButtonText}>+</Text>
+                    </TouchableOpacity>
                   </View>
 
-                  <TouchableOpacity
-                    style={styles.qtyBox}
-                    onPress={() => handleChangeQuantity(item.id, +1)}
-                  >
-                    <Text style={styles.qtyText}>+</Text>
-                  </TouchableOpacity>
+                  <Text style={styles.unitPriceText}>
+                    Unit price: ${formatPrice(item.unitPrice)}
+                  </Text>
                 </View>
-
-                {/* Precio unitario pequeño (opcional) */}
-                <Text style={styles.unitPriceText}>
-                  Unit price: ${formatPrice(item.unitPrice)}
-                </Text>
               </View>
-            </View>
-          );
-        })}
+            );
+          })}
+        </View>
+
+        {/* BOTÓN CHECKOUT (visual por ahora) */}
+        <TouchableOpacity style={styles.checkoutButton}>
+          <Ionicons
+            name="card-outline"
+            size={20}
+            color="#FFFFFF"
+            style={{ marginRight: 8 }}
+          />
+          <Text style={styles.checkoutText}>Proceed to checkout</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -138,17 +166,17 @@ export default HistoryScreen;
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: "#E5ECFF", // mismo fondo azulado que Wallet/Profile
   },
   header: {
     backgroundColor: "#1D6FB5",
-    paddingTop: 12,
-    paddingBottom: 16,
     paddingHorizontal: 16,
+    paddingTop: 18,
+    paddingBottom: 18,
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
   },
-  headerTopRow: {
+  headerRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -159,11 +187,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  backArrow: {
-    color: "#FFFFFF",
-    fontSize: 20,
-    fontWeight: "600",
-  },
   headerTitle: {
     fontSize: 22,
     fontWeight: "800",
@@ -171,59 +194,147 @@ const styles = StyleSheet.create({
   },
   headerSubtitle: {
     marginTop: 4,
-    textAlign: "center",
-    color: "#E5E7EB",
-    fontSize: 14,
+    color: "#DBEAFE",
+    fontSize: 13,
   },
   content: {
     flex: 1,
   },
-  itemRow: {
+
+  // RESUMEN
+  summaryCard: {
+    backgroundColor: "#1D4ED8",
+    borderRadius: 20,
+    padding: 16,
+    marginTop: 12,
+    marginBottom: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
+  },
+  summaryLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  summaryIconWrapper: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#3B82F6",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+    backgroundColor: "#1E40AF",
+  },
+  summaryLabel: {
+    fontSize: 14,
+    color: "#DBEAFE",
+    fontWeight: "500",
+  },
+  summaryHint: {
+    fontSize: 12,
+    color: "#BFDBFE",
+  },
+  summaryAmount: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#EFF6FF",
+  },
+
+  // ITEMS
+  itemsContainer: {
+    gap: 12,
+  },
+  itemCard: {
     flexDirection: "row",
     backgroundColor: "#FFFFFF",
-    borderRadius: 8,
+    borderRadius: 18,
     padding: 12,
-    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
   },
   imagePlaceholder: {
-    width: 110,
-    height: 110,
-    borderRadius: 4,
+    width: 90,
+    height: 90,
+    borderRadius: 12,
     backgroundColor: "#E5E7EB",
+    marginRight: 12,
   },
   itemInfo: {
     flex: 1,
-    marginLeft: 12,
     justifyContent: "space-between",
-    paddingVertical: 4,
   },
   itemName: {
-    fontSize: 16,
-    fontWeight: "500",
-    marginBottom: 4,
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#111827",
   },
   itemPrice: {
     fontSize: 18,
     fontWeight: "800",
-    marginBottom: 8,
+    color: "#111827",
+    marginTop: 4,
+    marginBottom: 6,
   },
   qtyRow: {
     flexDirection: "row",
     alignItems: "center",
+    marginBottom: 4,
   },
-  qtyBox: {
+  qtyButton: {
     borderWidth: 1,
-    borderColor: "#111827",
+    borderColor: "#1D4ED8",
+    borderRadius: 6,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    marginRight: 4,
+    backgroundColor: "#EFF6FF",
   },
-  qtyText: {
+  qtyButtonText: {
     fontSize: 16,
+    color: "#1D4ED8",
+    fontWeight: "600",
+  },
+  qtyValueBox: {
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    marginHorizontal: 4,
+    backgroundColor: "#FFFFFF",
+  },
+  qtyValueText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#111827",
   },
   unitPriceText: {
-    marginTop: 4,
-    color: "#6B7280",
     fontSize: 12,
+    color: "#6B7280",
+  },
+
+  // CHECKOUT
+  checkoutButton: {
+    marginTop: 20,
+    backgroundColor: "#1D4ED8",
+    borderRadius: 999,
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+  },
+  checkoutText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
 });

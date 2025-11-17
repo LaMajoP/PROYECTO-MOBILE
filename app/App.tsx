@@ -1,3 +1,4 @@
+// App.tsx
 import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -16,7 +17,6 @@ import { RootStackParamList } from "./src/types/navigation";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-// Tabs de la parte inferior
 type BottomTabParamList = {
   HomeTab: undefined;
   History: undefined;
@@ -33,18 +33,22 @@ function HomeTabs() {
         headerShown: false,
         tabBarShowLabel: false,
         tabBarStyle: {
-          backgroundColor: "#F9FAFB",
-          borderTopLeftRadius: 24,
-          borderTopRightRadius: 24,
-          height: 70,
           position: "absolute",
-          left: 0,
-          right: 0,
-          bottom: 0,
-          borderTopWidth: 0,
-          elevation: 10, // sombra en Android
+          left: 16,
+          right: 16,
+          bottom: 12,
+          borderRadius: 999,
+          backgroundColor: "#FFFFFF",
+          height: 60,
+          paddingTop: 6,
+          paddingBottom: 6,
+          shadowColor: "#000",
+          shadowOpacity: 0.12,
+          shadowRadius: 8,
+          shadowOffset: { width: 0, height: 4 },
+          elevation: 8,
         },
-        tabBarIcon: ({ focused, size }) => {
+        tabBarIcon: ({ focused, color, size }) => {
           let iconName: keyof typeof Ionicons.glyphMap = "home-outline";
 
           if (route.name === "HomeTab") {
@@ -57,11 +61,15 @@ function HomeTabs() {
             iconName = focused ? "person" : "person-outline";
           }
 
+          const tint = focused ? "#1D4ED8" : "#9CA3AF";
+
+          // 👇 Icono más pequeño y burbuja mucho más discreta
           return (
             <Ionicons
               name={iconName}
-              size={24}
-              color={focused ? "#111827" : "#9CA3AF"}
+              size={22}        // antes 24–26, ahora más normal
+              color={tint}
+              style={{ marginTop: 2 }}
             />
           );
         },
@@ -87,8 +95,6 @@ export default function App() {
       >
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
-
-        {/* 👇 Esta ruta "Home" ahora muestra las tabs inferiores */}
         <Stack.Screen name="Home" component={HomeTabs} />
       </Stack.Navigator>
     </NavigationContainer>

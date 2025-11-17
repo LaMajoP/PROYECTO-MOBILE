@@ -12,7 +12,7 @@ import {
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import SegmentedAuth from "../components/SegmentedAuth";
 import IconInput from "../components/IconInput";
-import { BG, BLUE, MUTED, TEXT } from "../theme/colors";
+import { BLUE, MUTED, TEXT } from "../theme/colors";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types/navigation";
 
@@ -29,60 +29,66 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        {/* Logo (bloque azul temporal) */}
-        <View style={styles.logo} />
-
-        <Text style={styles.title}>¡Welcome Back!</Text>
-        <Text style={styles.subtitle}>We are happy to see you again</Text>
-
-        {/* Segmento Login/Register */}
-        <SegmentedAuth
-          active="login"
-          onLeft={() => {}}
-          onRight={() => navigation.replace("Register")}
-        />
-
-        {/* Inputs */}
-        <IconInput
-          placeholder="Enter your email"
-          value={email}
-          onChangeText={setEmail}
-          icon="mail-outline"
-          keyboardType="email-address"
-        />
-        <IconInput
-          placeholder="Enter your password"
-          value={pass}
-          onChangeText={setPass}
-          secure
-        />
-
-        {/* Remember me */}
-        <View style={styles.row}>
-          <Pressable
-            onPress={() => setRemember((v) => !v)}
-            style={styles.remember}
-          >
-            <View style={[styles.checkbox, remember && styles.checkboxOn]}>
-              {remember && (
-                <MaterialIcons name="check" size={16} color="#fff" />
-              )}
-            </View>
-            <Text style={styles.rememberText}>Remember me</Text>
-          </Pressable>
-
-          <Pressable>
-            <Text style={styles.link}>Forgot password?</Text>
-          </Pressable>
+        {/* HEADER azul, consistente con el resto de pantallas */}
+        <View style={styles.header}>
+          <Text style={styles.appTitle}>GlobalLocker</Text>
+          <Text style={styles.headerTitle}>Welcome back</Text>
+          <Text style={styles.headerSubtitle}>
+            Log in to continue shopping safely
+          </Text>
         </View>
 
-        {/* Botón principal */}
-        <TouchableOpacity
-          style={styles.primaryBtn}
-          onPress={() => navigation.replace("Home")} // 👈 aquí navegamos a Home
-        >
-          <Text style={styles.primaryBtnText}>Log in</Text>
-        </TouchableOpacity>
+        {/* CARD blanca con el formulario */}
+        <View style={styles.card}>
+          {/* Segmento Login/Register */}
+          <SegmentedAuth
+            active="login"
+            onLeft={() => {}}
+            onRight={() => navigation.replace("Register")}
+          />
+
+          {/* Inputs */}
+          <IconInput
+            placeholder="Enter your email"
+            value={email}
+            onChangeText={setEmail}
+            icon="mail-outline"
+            keyboardType="email-address"
+          />
+          <IconInput
+            placeholder="Enter your password"
+            value={pass}
+            onChangeText={setPass}
+            secure
+          />
+
+          {/* Remember me + Forgot password */}
+          <View style={styles.row}>
+            <Pressable
+              onPress={() => setRemember((v) => !v)}
+              style={styles.remember}
+            >
+              <View style={[styles.checkbox, remember && styles.checkboxOn]}>
+                {remember && (
+                  <MaterialIcons name="check" size={16} color="#fff" />
+                )}
+              </View>
+              <Text style={styles.rememberText}>Remember me</Text>
+            </Pressable>
+
+            <Pressable>
+              <Text style={styles.link}>Forgot password?</Text>
+            </Pressable>
+          </View>
+
+          {/* Botón principal */}
+          <TouchableOpacity
+            style={styles.primaryBtn}
+            onPress={() => navigation.replace("Home")}
+          >
+            <Text style={styles.primaryBtnText}>Log in</Text>
+          </TouchableOpacity>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -93,31 +99,50 @@ export default LoginScreen;
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: BG,
+    backgroundColor: "#E5ECFF", // mismo fondo azulado que el resto
   },
   container: {
     flex: 1,
-    backgroundColor: BG,
-    paddingHorizontal: 28,
-    paddingTop: 24,
-    gap: 14,
   },
-  logo: {
-    alignSelf: "center",
-    width: 200,
-    height: 70,
-    backgroundColor: BLUE,
-    borderRadius: 6,
-    marginVertical: 24,
+  header: {
+    backgroundColor: BLUE ?? "#1D6FB5",
+    paddingHorizontal: 24,
+    paddingTop: 26,
+    paddingBottom: 26,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: TEXT,
-  },
-  subtitle: {
-    color: MUTED,
+  appTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#DBEAFE",
     marginBottom: 4,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#FFFFFF",
+  },
+  headerSubtitle: {
+    marginTop: 4,
+    color: "#DBEAFE",
+    fontSize: 13,
+  },
+  card: {
+    flex: 1,
+    marginTop: 16,
+    marginHorizontal: 16,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 24,
+    gap: 14,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   row: {
     flexDirection: "row",
@@ -140,21 +165,23 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   checkboxOn: {
-    backgroundColor: BLUE,
-    borderColor: BLUE,
+    backgroundColor: BLUE ?? "#1D6FB5",
+    borderColor: BLUE ?? "#1D6FB5",
   },
   rememberText: {
     color: "#2F3C4B",
+    fontSize: 13,
   },
   link: {
-    color: BLUE,
+    color: BLUE ?? "#1D6FB5",
     fontWeight: "600",
+    fontSize: 13,
   },
   primaryBtn: {
-    marginTop: 8,
-    backgroundColor: BLUE,
+    marginTop: 4,
+    backgroundColor: BLUE ?? "#1D6FB5",
     paddingVertical: 12,
-    borderRadius: 22,
+    borderRadius: 999,
     alignItems: "center",
   },
   primaryBtnText: {
@@ -162,4 +189,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
   },
+  // por si quieres usar TEXT/MUTED del theme
+  title: { fontSize: 22, fontWeight: "700", color: TEXT },
+  subtitle: { color: MUTED, marginBottom: 4 },
 });
