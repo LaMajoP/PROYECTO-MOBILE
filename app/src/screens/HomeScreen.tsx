@@ -18,7 +18,7 @@ type Product = {
   rating: number; // 1 a 5
 };
 
-const FILTERS = ['Deals', 'Electronics', 'Home', 'Beauty & Health'];
+const FILTERS = ['Electronics', 'Home', 'Beauty & Health'];
 
 const PRODUCTS: Product[] = [
   { id: '1', price: '19.118', rating: 2 },
