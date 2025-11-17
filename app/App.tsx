@@ -1,4 +1,3 @@
-// App.tsx
 import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -11,6 +10,7 @@ import HomeScreen from "./src/screens/HomeScreen";
 import HistoryScreen from "./src/screens/HistoryScreen";
 import WalletScreen from "./src/screens/WalletScreen";
 import ProfileScreen from "./src/screens/ProfileScreen";
+import ProductDetailScreen from "./src/screens/ProductDetailScreen";
 
 import { BG } from "./src/theme/colors";
 import { RootStackParamList } from "./src/types/navigation";
@@ -48,7 +48,7 @@ function HomeTabs() {
           shadowOffset: { width: 0, height: 4 },
           elevation: 8,
         },
-        tabBarIcon: ({ focused, color, size }) => {
+        tabBarIcon: ({ focused }) => {
           let iconName: keyof typeof Ionicons.glyphMap = "home-outline";
 
           if (route.name === "HomeTab") {
@@ -63,11 +63,10 @@ function HomeTabs() {
 
           const tint = focused ? "#1D4ED8" : "#9CA3AF";
 
-          // 👇 Icono más pequeño y burbuja mucho más discreta
           return (
             <Ionicons
               name={iconName}
-              size={22}        // antes 24–26, ahora más normal
+              size={22}
               color={tint}
               style={{ marginTop: 2 }}
             />
@@ -95,7 +94,12 @@ export default function App() {
       >
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
+
+        {/* Tabs con la barra inferior */}
         <Stack.Screen name="Home" component={HomeTabs} />
+
+        {/* Detalle de producto */}
+        <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

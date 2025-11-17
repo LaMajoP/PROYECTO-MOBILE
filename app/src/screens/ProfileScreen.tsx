@@ -1,6 +1,6 @@
 // src/screens/ProfileScreen.tsx
 
-import React from "react";
+import React, { useState } from "react";
 import {
   SafeAreaView,
   View,
@@ -8,6 +8,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  TextInput,
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
@@ -17,7 +18,6 @@ type ProfileOption = {
   icon: keyof typeof Ionicons.glyphMap;
 };
 
-// SIN settings/help, como pediste
 const PROFILE_OPTIONS: ProfileOption[] = [
   { id: "wishlist", title: "Wishlist", icon: "heart-outline" },
   { id: "orders", title: "Order history", icon: "bag-outline" },
@@ -40,6 +40,147 @@ const ProfileScreen: React.FC = () => {
   const userName = "User Name";
   const userEmail = "user@email.com";
 
+  // id de la sección abierta (o null si ninguna)
+  const [openSection, setOpenSection] = useState<string | null>(null);
+
+  const toggleSection = (id: string) => {
+    setOpenSection((prev) => (prev === id ? null : id));
+  };
+
+  const renderSectionContent = (id: string) => {
+    switch (id) {
+      case "wishlist":
+        return (
+          <View style={styles.sectionBody}>
+            <Text style={styles.sectionText}>
+              Here you will see the products you saved for later.
+            </Text>
+            <View style={styles.tagRow}>
+              <View style={styles.tagPill}>
+                <Text style={styles.tagText}>Cute Lamp</Text>
+              </View>
+              <View style={styles.tagPill}>
+                <Text style={styles.tagText}>Strawberry Blanket</Text>
+              </View>
+            </View>
+          </View>
+        );
+      case "orders":
+        return (
+          <View style={styles.sectionBody}>
+            <Text style={styles.sectionText}>
+              Recent orders (static data for now):
+            </Text>
+            <View style={styles.listItemRow}>
+              <Text style={styles.listItemTitle}>#GLM-10234</Text>
+              <Text style={styles.listItemSubtitle}>Delivered · $27.959</Text>
+            </View>
+            <View style={styles.listItemRow}>
+              <Text style={styles.listItemTitle}>#GLM-09821</Text>
+              <Text style={styles.listItemSubtitle}>
+                On the way · $19.118
+              </Text>
+            </View>
+          </View>
+        );
+      case "payments":
+        return (
+          <View style={styles.sectionBody}>
+            <Text style={styles.sectionText}>Default card:</Text>
+            <View style={styles.cardRow}>
+              <Ionicons name="card-outline" size={18} color="#1F2937" />
+              <Text style={styles.cardText}>Visa ···· 1234</Text>
+            </View>
+            <TouchableOpacity style={styles.secondaryBtn}>
+              <Text style={styles.secondaryBtnText}>Add new card</Text>
+            </TouchableOpacity>
+          </View>
+        );
+      case "password":
+        return (
+          <View style={styles.sectionBody}>
+            <Text style={styles.sectionText}>
+              Update your password (dummy form):
+            </Text>
+            <TextInput
+              placeholder="Current password"
+              secureTextEntry
+              style={styles.input}
+            />
+            <TextInput
+              placeholder="New password"
+              secureTextEntry
+              style={styles.input}
+            />
+            <TextInput
+              placeholder="Confirm new password"
+              secureTextEntry
+              style={styles.input}
+            />
+            <TouchableOpacity style={styles.primarySmallBtn}>
+              <Text style={styles.primarySmallBtnText}>Save password</Text>
+            </TouchableOpacity>
+          </View>
+        );
+      case "personal-info":
+        return (
+          <View style={styles.sectionBody}>
+            <Text style={styles.sectionText}>Update your personal info:</Text>
+            <TextInput
+              placeholder="Full name"
+              defaultValue={userName}
+              style={styles.input}
+            />
+            <TextInput
+              placeholder="Email"
+              defaultValue={userEmail}
+              keyboardType="email-address"
+              style={styles.input}
+            />
+            <TouchableOpacity style={styles.primarySmallBtn}>
+              <Text style={styles.primarySmallBtnText}>Save changes</Text>
+            </TouchableOpacity>
+          </View>
+        );
+      case "language":
+        return (
+          <View style={styles.sectionBody}>
+            <Text style={styles.sectionText}>Choose your language:</Text>
+            <View style={styles.chipsRow}>
+              <View style={[styles.langChip, styles.langChipActive]}>
+                <Text style={styles.langChipTextActive}>English</Text>
+              </View>
+              <View style={styles.langChip}>
+                <Text style={styles.langChipText}>Español</Text>
+              </View>
+              <View style={styles.langChip}>
+                <Text style={styles.langChipText}>Português</Text>
+              </View>
+            </View>
+          </View>
+        );
+      case "currency":
+        return (
+          <View style={styles.sectionBody}>
+            <Text style={styles.sectionText}>Preferred currency:</Text>
+            <View style={styles.chipsRow}>
+              <View style={[styles.langChip, styles.langChipActive]}>
+                <Text style={styles.langChipTextActive}>USD $</Text>
+              </View>
+              <View style={styles.langChip}>
+                <Text style={styles.langChipText}>COP $</Text>
+              </View>
+              <View style={styles.langChip}>
+                <Text style={styles.langChipText}>MXN $</Text>
+              </View>
+            </View>
+          </View>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       {/* HEADER azul estilo Wallet */}
@@ -61,7 +202,7 @@ const ProfileScreen: React.FC = () => {
         contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* CARD DE PERFIL (match con tarjeta de saldo del Wallet) */}
+        {/* CARD DE PERFIL */}
         <View style={styles.profileCard}>
           <View style={styles.avatarSection}>
             <View style={styles.avatarCircle}>
@@ -94,37 +235,42 @@ const ProfileScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* CARD DE OPCIONES estilo “transactionsCard” */}
+        {/* CARD DE OPCIONES con secciones expandibles */}
         <View style={styles.optionsCard}>
-          {PROFILE_OPTIONS.map((opt, index) => (
-            <View key={opt.id}>
-              <TouchableOpacity style={styles.optionRow}>
-                <View style={styles.optionLeft}>
-                  <View style={styles.optionIconWrapper}>
-                    <Ionicons
-                      name={opt.icon}
-                      size={18}
-                      color="#1F2937"
-                    />
+          {PROFILE_OPTIONS.map((opt, index) => {
+            const isOpen = openSection === opt.id;
+            return (
+              <View key={opt.id}>
+                <TouchableOpacity
+                  style={styles.optionRow}
+                  activeOpacity={0.8}
+                  onPress={() => toggleSection(opt.id)}
+                >
+                  <View style={styles.optionLeft}>
+                    <View style={styles.optionIconWrapper}>
+                      <Ionicons name={opt.icon} size={18} color="#1F2937" />
+                    </View>
+                    <Text style={styles.optionText}>{opt.title}</Text>
                   </View>
-                  <Text style={styles.optionText}>{opt.title}</Text>
-                </View>
 
-                <Ionicons
-                  name="chevron-forward"
-                  size={20}
-                  color="#9CA3AF"
-                />
-              </TouchableOpacity>
+                  <Ionicons
+                    name={isOpen ? "chevron-up" : "chevron-down"}
+                    size={18}
+                    color="#9CA3AF"
+                  />
+                </TouchableOpacity>
 
-              {index < PROFILE_OPTIONS.length - 1 && (
-                <View style={styles.divider} />
-              )}
-            </View>
-          ))}
+                {isOpen && renderSectionContent(opt.id)}
+
+                {index < PROFILE_OPTIONS.length - 1 && (
+                  <View style={styles.divider} />
+                )}
+              </View>
+            );
+          })}
         </View>
 
-        {/* BOTÓN LOG OUT estilo pill rojo como en diseños modernos */}
+        {/* LOG OUT */}
         <TouchableOpacity style={styles.logoutButton}>
           <Ionicons
             name="log-out-outline"
@@ -144,7 +290,7 @@ export default ProfileScreen;
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#E5ECFF", // mismo tipo de fondo azulado que Wallet
+    backgroundColor: "#E5ECFF",
   },
   header: {
     backgroundColor: "#1D6FB5",
@@ -299,6 +445,118 @@ const styles = StyleSheet.create({
   divider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: "#E5E7EB",
+    marginTop: 6,
+  },
+
+  // CONTENIDO EXPANDIDO
+  sectionBody: {
+    paddingHorizontal: 10,
+    paddingBottom: 10,
+  },
+  sectionText: {
+    fontSize: 13,
+    color: "#4B5563",
+    marginBottom: 6,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 13,
+    marginBottom: 8,
+    backgroundColor: "#F9FAFB",
+  },
+  primarySmallBtn: {
+    marginTop: 4,
+    alignSelf: "flex-start",
+    backgroundColor: "#1D4ED8",
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  primarySmallBtnText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  secondaryBtn: {
+    marginTop: 8,
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#1D4ED8",
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  secondaryBtnText: {
+    color: "#1D4ED8",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  tagRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  tagPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: "#EFF6FF",
+  },
+  tagText: {
+    fontSize: 12,
+    color: "#1D4ED8",
+  },
+  listItemRow: {
+    marginTop: 4,
+  },
+  listItemTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#111827",
+  },
+  listItemSubtitle: {
+    fontSize: 12,
+    color: "#6B7280",
+  },
+
+    cardRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 4,
+  },
+  cardText: {
+    fontSize: 13,
+    color: "#111827",
+    fontWeight: "500",
+  },
+
+  langChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginRight: 6,
+    marginTop: 4,
+    backgroundColor: "#FFFFFF",
+  },
+  langChipActive: {
+    backgroundColor: "#EFF6FF",
+    borderColor: "#1D4ED8",
+  },
+  langChipText: {
+    fontSize: 12,
+    color: "#4B5563",
+  },
+  langChipTextActive: {
+    fontSize: 12,
+    color: "#1D4ED8",
+    fontWeight: "600",
   },
 
   // LOG OUT

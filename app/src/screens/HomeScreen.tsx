@@ -10,6 +10,9 @@ import {
   TouchableOpacity,
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../types/navigation";
 
 type Product = {
   id: string;
@@ -17,6 +20,8 @@ type Product = {
   price: string;
   rating: number; // 1 a 5
 };
+
+type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 const FILTERS = ["Electronics", "Home", "Beauty & Health"];
 
@@ -35,6 +40,8 @@ const renderStars = (rating: number) => {
 };
 
 const HomeScreen: React.FC = () => {
+  const navigation = useNavigation<Nav>();
+
   return (
     <SafeAreaView style={styles.safeArea}>
       {/* HEADER estilo general de la app */}
@@ -93,7 +100,18 @@ const HomeScreen: React.FC = () => {
           scrollEnabled={false} // Scroll lo maneja el ScrollView principal
           columnWrapperStyle={styles.productsRow}
           renderItem={({ item }) => (
-            <View style={styles.productCard}>
+            <TouchableOpacity
+              style={styles.productCard}
+              activeOpacity={0.85}
+              onPress={() =>
+                navigation.navigate("ProductDetail", {
+                  id: item.id,
+                  name: item.name,
+                  price: item.price,
+                  rating: item.rating,
+                })
+              }
+            >
               {/* Imagen placeholder */}
               <View style={styles.imagePlaceholder}>
                 <Ionicons
@@ -108,7 +126,7 @@ const HomeScreen: React.FC = () => {
               </Text>
               <Text style={styles.priceText}>${item.price}</Text>
               <Text style={styles.starsText}>{renderStars(item.rating)}</Text>
-            </View>
+            </TouchableOpacity>
           )}
         />
       </ScrollView>
@@ -118,10 +136,11 @@ const HomeScreen: React.FC = () => {
 
 export default HomeScreen;
 
+// estilos iguales que ya tenías
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#E5ECFF", // mismo fondo azulado que Wallet/Profile/History
+    backgroundColor: "#E5ECFF",
   },
   header: {
     backgroundColor: "#1D6FB5",
@@ -177,12 +196,9 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#111827",
   },
-
   content: {
     flex: 1,
   },
-
-  // FILTROS
   filtersRow: {
     marginTop: 8,
   },
@@ -203,8 +219,6 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#1D4ED8",
   },
-
-  // PRODUCTOS
   productsRow: {
     justifyContent: "space-between",
     marginTop: 16,
@@ -245,6 +259,6 @@ const styles = StyleSheet.create({
   },
   starsText: {
     fontSize: 13,
-    color: "#F59E0B", // amarillo suave para estrellas
+    color: "#F59E0B",
   },
 });
