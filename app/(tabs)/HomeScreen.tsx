@@ -10,9 +10,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useNavigation } from "@react-navigation/native";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../types/navigation";
+import { useRouter } from "expo-router";
 
 type Product = {
   id: string;
@@ -20,8 +18,6 @@ type Product = {
   price: string;
   rating: number; // 1 a 5
 };
-
-type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 const FILTERS = ["Electronics", "Home", "Beauty & Health"];
 
@@ -40,7 +36,19 @@ const renderStars = (rating: number) => {
 };
 
 const HomeScreen: React.FC = () => {
-  const navigation = useNavigation<Nav>();
+  const router = useRouter();
+
+  const handleProductPress = (product: Product) => {
+    router.push({
+      pathname: "/(tabs)/product/[id]",
+      params: {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        rating: product.rating.toString(),
+      },
+    });
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -103,14 +111,7 @@ const HomeScreen: React.FC = () => {
             <TouchableOpacity
               style={styles.productCard}
               activeOpacity={0.85}
-              onPress={() =>
-                navigation.navigate("ProductDetail", {
-                  id: item.id,
-                  name: item.name,
-                  price: item.price,
-                  rating: item.rating,
-                })
-              }
+              onPress={() => handleProductPress(item)}
             >
               {/* Imagen placeholder */}
               <View style={styles.imagePlaceholder}>

@@ -8,10 +8,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../types/navigation";
-
-type Props = NativeStackScreenProps<RootStackParamList, "ProductDetail">;
+import { useRouter, useLocalSearchParams } from "expo-router";
 
 type LockerOption = "fast" | "cheap";
 
@@ -21,12 +18,17 @@ const renderStars = (rating: number) => {
   return full + empty;
 };
 
-const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
-  const { name, price, rating } = route.params;
+const ProductDetailScreen: React.FC = () => {
+  const router = useRouter();
+  const { name, price, rating } = useLocalSearchParams<{
+    name: string;
+    price: string;
+    rating: string;
+  }>();
 
-  const [selectedLocker, setSelectedLocker] = useState<LockerOption | null>(
-    "fast"
-  );
+  const [selectedLocker, setSelectedLocker] = useState<LockerOption>("fast");
+
+  const ratingNum = parseInt(rating || "0", 10);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -35,12 +37,12 @@ const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
         <View style={styles.headerRow}>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => navigation.goBack()}
+            onPress={() => router.back()}
           >
             <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
 
-          <Text style={styles.headerTitle}>Shopping Cart</Text>
+          <Text style={styles.headerTitle}>Product Details</Text>
 
           <View style={{ width: 24 }} />
         </View>
@@ -69,7 +71,7 @@ const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
         </View>
 
         <View style={styles.ratingRow}>
-          <Text style={styles.starsText}>{renderStars(rating)}</Text>
+          <Text style={styles.starsText}>{renderStars(ratingNum)}</Text>
           <Text style={styles.reviewsCount}>(48 reviews)</Text>
         </View>
 

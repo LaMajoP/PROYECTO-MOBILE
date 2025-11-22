@@ -8,20 +8,51 @@ import {
   StyleSheet,
   TouchableOpacity,
   Pressable,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import SegmentedAuth from "../components/SegmentedAuth";
-import IconInput from "../components/IconInput";
-import { BLUE, MUTED, TEXT } from "../theme/colors";
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../types/navigation";
+import { useRouter } from "expo-router";
+import SegmentedAuth from "../../src/components/SegmentedAuth";
+import IconInput from "../../src/components/IconInput";
+import { BLUE, MUTED, TEXT } from "../../src/theme/colors";
+import { supabase } from "../../lib/supabaseClient";
 
-type Props = NativeStackScreenProps<RootStackParamList, "Login">;
-
-const LoginScreen: React.FC<Props> = ({ navigation }) => {
+const LoginScreen: React.FC = () => {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [remember, setRemember] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    if (!email || !pass) {
+      Alert.alert("Error", "Please fill in all fields");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password: pass,
+      });
+
+      if (error) {
+        Alert.alert("Login Error", error.message);
+        return;
+      }
+
+      if (data.session) {
+        router.replace("/(tabs)/home");
+      }
+    } catch (err) {
+      Alert.alert("Error", "An unexpected error occurred");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -29,7 +60,6 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        {/* HEADER azul, consistente con el resto de pantallas */}
         <View style={styles.header}>
           <Text style={styles.appTitle}>GlobalLocker</Text>
           <Text style={styles.headerTitle}>Welcome back</Text>
@@ -38,16 +68,13 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
           </Text>
         </View>
 
-        {/* CARD blanca con el formulario */}
         <View style={styles.card}>
-          {/* Segmento Login/Register */}
           <SegmentedAuth
             active="login"
             onLeft={() => {}}
-            onRight={() => navigation.replace("Register")}
+            onRight={() => router.push("/(auth)/register")}
           />
 
-          {/* Inputs */}
           <IconInput
             placeholder="Enter your email"
             value={email}
@@ -62,11 +89,11 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
             secure
           />
 
-          {/* Remember me + Forgot password */}
           <View style={styles.row}>
             <Pressable
               onPress={() => setRemember((v) => !v)}
               style={styles.remember}
+              disabled={loading}
             >
               <View style={[styles.checkbox, remember && styles.checkboxOn]}>
                 {remember && (
@@ -76,18 +103,29 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
               <Text style={styles.rememberText}>Remember me</Text>
             </Pressable>
 
-            <Pressable>
+            <Pressable disabled={loading}>
               <Text style={styles.link}>Forgot password?</Text>
             </Pressable>
           </View>
 
-          {/* Botón principal */}
           <TouchableOpacity
-            style={styles.primaryBtn}
-            onPress={() => navigation.replace("Home")}
+            style={[styles.primaryBtn, loading && styles.primaryBtnDisabled]}
+            onPress={handleLogin}
+            disabled={loading}
           >
-            <Text style={styles.primaryBtnText}>Log in</Text>
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.primaryBtnText}>Log in</Text>
+            )}
           </TouchableOpacity>
+
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Don't have an account? </Text>
+            <Pressable onPress={() => router.push("/(auth)/register")} disabled={loading}>
+              <Text style={[styles.link, { fontWeight: "700" }]}>Sign up</Text>
+            </Pressable>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -99,7 +137,7 @@ export default LoginScreen;
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: "#E5ECFF", // mismo fondo azulado que el resto
+    backgroundColor: "#E5ECFF",
   },
   container: {
     flex: 1,
@@ -183,13 +221,27 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 999,
     alignItems: "center",
+    minHeight: 48,
+    justifyContent: "center",
+  },
+  primaryBtnDisabled: {
+    opacity: 0.6,
   },
   primaryBtnText: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "700",
   },
-  // por si quieres usar TEXT/MUTED del theme
+  footer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 8,
+  },
+  footerText: {
+    color: MUTED,
+    fontSize: 13,
+  },
   title: { fontSize: 22, fontWeight: "700", color: TEXT },
   subtitle: { color: MUTED, marginBottom: 4 },
 });

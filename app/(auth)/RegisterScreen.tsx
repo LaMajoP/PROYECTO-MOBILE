@@ -1,5 +1,3 @@
-// src/screens/RegisterScreen.tsx
-
 import React, { useState } from "react";
 import {
   SafeAreaView,
@@ -9,20 +7,87 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
-import SegmentedAuth from "../components/SegmentedAuth";
-import IconInput from "../components/IconInput";
-import { BLUE, MUTED, TEXT } from "../theme/colors";
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../types/navigation";
+import { useRouter } from "expo-router";
+import SegmentedAuth from "../../src/components/SegmentedAuth";
+import IconInput from "../../src/components/IconInput";
+import { BLUE, MUTED, TEXT } from "../../src/theme/colors";
+import { supabase } from "../../lib/supabaseClient";
 
-type Props = NativeStackScreenProps<RootStackParamList, "Register">;
-
-const RegisterScreen: React.FC<Props> = ({ navigation }) => {
+const RegisterScreen: React.FC = () => {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSignUp = async () => {
+    // Validaciones
+    if (!name || !email || !pass || !confirm) {
+      Alert.alert("Error", "Please fill in all fields");
+      return;
+    }
+
+    if (pass !== confirm) {
+      Alert.alert("Error", "Passwords do not match");
+      return;
+    }
+
+    if (pass.length < 6) {
+      Alert.alert("Error", "Password must be at least 6 characters");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Registrar usuario con Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password: pass,
+      });
+
+      if (error) {
+        Alert.alert("Sign Up Error", error.message);
+        return;
+      }
+
+      if (data.user) {
+        // Opcionalmente guardar el nombre en la tabla de usuarios
+        const { error: profileError } = await supabase
+          .from("users")
+          .insert([
+            {
+              id: data.user.id,
+              email: data.user.email,
+              full_name: name,
+            },
+          ]);
+
+        if (profileError) {
+          console.warn("Profile creation warning:", profileError);
+        }
+
+        Alert.alert(
+          "Success",
+          "Account created! Please check your email to confirm your account.",
+          [
+            {
+              text: "OK",
+              onPress: () => router.push("/(auth)/login"),
+            },
+          ]
+        );
+      }
+    } catch (err) {
+      Alert.alert("Error", "An unexpected error occurred");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -43,7 +108,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
         <View style={styles.card}>
           <SegmentedAuth
             active="register"
-            onLeft={() => navigation.replace("Login")}
+            onLeft={() => router.push("/(auth)/login")}
             onRight={() => {}}
           />
 
@@ -76,11 +141,27 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
 
           {/* Botón de registro */}
           <TouchableOpacity
-            style={styles.primaryBtn}
-            onPress={() => navigation.replace("Home")}
+            style={[styles.primaryBtn, loading && styles.primaryBtnDisabled]}
+            onPress={handleSignUp}
+            disabled={loading}
           >
-            <Text style={styles.primaryBtnText}>Sign up</Text>
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.primaryBtnText}>Sign up</Text>
+            )}
           </TouchableOpacity>
+
+          {/* Link a Login */}
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Already have an account? </Text>
+            <TouchableOpacity
+              onPress={() => router.push("/(auth)/login")}
+              disabled={loading}
+            >
+              <Text style={[styles.link, { fontWeight: "700" }]}>Log in</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -92,7 +173,7 @@ export default RegisterScreen;
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: "#E5ECFF", // mismo fondo azulado que el login
+    backgroundColor: "#E5ECFF",
   },
   container: {
     flex: 1,
@@ -143,13 +224,32 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 999,
     alignItems: "center",
+    minHeight: 48,
+    justifyContent: "center",
+  },
+  primaryBtnDisabled: {
+    opacity: 0.6,
   },
   primaryBtnText: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "700",
   },
-  // (por si luego quieres usar TEXT/MUTED en otros textos)
+  footer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 8,
+  },
+  footerText: {
+    color: MUTED,
+    fontSize: 13,
+  },
+  link: {
+    color: BLUE ?? "#1D6FB5",
+    fontWeight: "600",
+    fontSize: 13,
+  },
   title: { fontSize: 22, fontWeight: "700", color: TEXT },
   subtitle: { color: MUTED, marginBottom: 4 },
 });
