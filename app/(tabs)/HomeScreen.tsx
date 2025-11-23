@@ -40,7 +40,7 @@ const HomeScreen: React.FC = () => {
 
   const handleProductPress = (product: Product) => {
     router.push({
-      pathname: "/(tabs)/product/[id]",
+      pathname: "/product/ProductDetailScreen",
       params: {
         id: product.id,
         name: product.name,
