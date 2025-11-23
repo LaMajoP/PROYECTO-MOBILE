@@ -44,7 +44,7 @@ const LoginScreen: React.FC = () => {
       }
 
       if (data.session) {
-        router.replace("/(tabs)/home");
+        router.replace("/(tabs)/HomeScreen");
       }
     } catch (err) {
       Alert.alert("Error", "An unexpected error occurred");
@@ -72,7 +72,7 @@ const LoginScreen: React.FC = () => {
           <SegmentedAuth
             active="login"
             onLeft={() => {}}
-            onRight={() => router.push("/(auth)/register")}
+            onRight={() => router.push("/(auth)/RegisterScreen")}
           />
 
           <IconInput
@@ -122,7 +122,7 @@ const LoginScreen: React.FC = () => {
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>Don't have an account? </Text>
-            <Pressable onPress={() => router.push("/(auth)/register")} disabled={loading}>
+            <Pressable onPress={() => router.push("/(auth)/RegisterScreen")} disabled={loading}>
               <Text style={[styles.link, { fontWeight: "700" }]}>Sign up</Text>
             </Pressable>
           </View>

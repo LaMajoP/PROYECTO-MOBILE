@@ -76,7 +76,7 @@ const RegisterScreen: React.FC = () => {
           [
             {
               text: "OK",
-              onPress: () => router.push("/(auth)/login"),
+              onPress: () => router.push("/(auth)/LoginScreen"),
             },
           ]
         );
@@ -108,7 +108,7 @@ const RegisterScreen: React.FC = () => {
         <View style={styles.card}>
           <SegmentedAuth
             active="register"
-            onLeft={() => router.push("/(auth)/login")}
+            onLeft={() => router.push("/(auth)/LoginScreen")}
             onRight={() => {}}
           />
 
@@ -156,7 +156,7 @@ const RegisterScreen: React.FC = () => {
           <View style={styles.footer}>
             <Text style={styles.footerText}>Already have an account? </Text>
             <TouchableOpacity
-              onPress={() => router.push("/(auth)/login")}
+              onPress={() => router.push("/(auth)/LoginScreen")}
               disabled={loading}
             >
               <Text style={[styles.link, { fontWeight: "700" }]}>Log in</Text>

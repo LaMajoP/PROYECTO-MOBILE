@@ -1,36 +1,34 @@
-import { supabase } from '../lib/supabaseClient';
+// services/auth.ts
+import { supabase } from "../lib/supabaseClient";
 
-export async function loginWithEmail(email: string, password: string) {
+export async function signInWithEmail(email: string, password: string) {
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
-  if (error) {
-    // Aquí puedes manejar el error como quieras
-    throw new Error(error.message);
-  }
-
-  // data.session tiene el token y el usuario logueado
-  return data;
+  return { data, error };
 }
 
-export async function signUpWithEmail(email: string, password: string) {
+export async function signUpWithEmail(
+  name: string,
+  email: string,
+  password: string
+) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
+    options: {
+      data: {
+        full_name: name,
+      },
+    },
   });
 
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return data;
+  return { data, error };
 }
 
-export async function logout() {
+export async function signOut() {
   const { error } = await supabase.auth.signOut();
-  if (error) {
-    throw new Error(error.message);
-  }
+  return { error };
 }
