@@ -1,6 +1,6 @@
-// src/screens/ProfileScreen.tsx
+// app/(tabs)/ProfileScreen.tsx
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   SafeAreaView,
   View,
@@ -9,8 +9,13 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useRouter } from "expo-router";
+import { useAuth } from "../../services/auth";
+import { supabase } from "../../lib/supabaseClient";
 
 type ProfileOption = {
   id: string;
@@ -18,6 +23,7 @@ type ProfileOption = {
   icon: keyof typeof Ionicons.glyphMap;
 };
 
+/* Opciones del perfil */
 const PROFILE_OPTIONS: ProfileOption[] = [
   { id: "wishlist", title: "Wishlist", icon: "heart-outline" },
   { id: "orders", title: "Order history", icon: "bag-outline" },
@@ -36,16 +42,80 @@ const PROFILE_OPTIONS: ProfileOption[] = [
   },
 ];
 
-const ProfileScreen: React.FC = () => {
-  const userName = "User Name";
-  const userEmail = "user@email.com";
+/* Simplified user profile type */
+type UserProfile = {
+  full_name?: string | null;
+  email?: string | null;
+};
 
-  // id de la sección abierta (o null si ninguna)
+const ProfileScreen: React.FC = () => {
+  const router = useRouter();
+  const { user } = useAuth();
   const [openSection, setOpenSection] = useState<string | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) {
+        setProfile(null);
+        return;
+      }
+
+      setLoadingProfile(true);
+      try {
+        // Usamos single() asumiendo que la fila existe; si no, hacemos fallback al user de auth
+        const { data, error } = await supabase
+          .from("users")
+          .select("full_name, email")
+          .eq("id", user.id)
+          .single();
+
+        if (error) {
+          // Si no existe fila o hay error, logueamos y usamos fallback
+          console.warn("Profile fetch warning:", error);
+          setProfile({
+            full_name: user.email?.split("@")[0] ?? null,
+            email: user.email ?? null,
+          });
+          return;
+        }
+
+        setProfile({
+          full_name: data?.full_name ?? user.email?.split("@")[0] ?? null,
+          email: data?.email ?? user.email ?? null,
+        });
+      } catch (err) {
+        console.error("Unexpected profile error:", err);
+        setProfile({
+          full_name: user.email?.split("@")[0] ?? null,
+          email: user.email ?? null,
+        });
+      } finally {
+        setLoadingProfile(false);
+      }
+    };
+
+    fetchProfile();
+  }, [user]);
 
   const toggleSection = (id: string) => {
     setOpenSection((prev) => (prev === id ? null : id));
   };
+
+  const userName = profile?.full_name ?? "User Name";
+  const userEmail = profile?.email ?? user?.email ?? "user@email.com";
+
+  const handleLogout = async () => {
+  try {
+    await supabase.auth.signOut(); 
+    router.replace("/(auth)/LoginScreen");
+  } catch (err) {
+    console.error(err);
+    Alert.alert("Error", "Could not log out, please try again.");
+  }
+};
+
 
   const renderSectionContent = (id: string) => {
     switch (id) {
@@ -181,28 +251,39 @@ const ProfileScreen: React.FC = () => {
     }
   };
 
+  if (!user) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.center}>
+          <Text style={styles.sectionText}>
+            You are not logged in. Redirecting...
+          </Text>
+          <TouchableOpacity
+            style={styles.primarySmallBtn}
+            onPress={() => router.replace("/(auth)/login")}
+          >
+            <Text style={styles.primarySmallBtnText}>Go to login</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* HEADER azul estilo Wallet */}
       <View style={styles.header}>
         <View style={styles.headerRow}>
-          <TouchableOpacity style={styles.backButton}>
-            <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-
+          <View style={{ width: 24 }} />
           <Text style={styles.headerTitle}>My Profile</Text>
-
           <View style={{ width: 24 }} />
         </View>
       </View>
 
-      {/* CONTENIDO */}
       <ScrollView
         style={styles.content}
         contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* CARD DE PERFIL */}
         <View style={styles.profileCard}>
           <View style={styles.avatarSection}>
             <View style={styles.avatarCircle}>
@@ -215,16 +296,18 @@ const ProfileScreen: React.FC = () => {
           </View>
 
           <View style={styles.profileInfo}>
-            <Text style={styles.userName}>{userName}</Text>
-            <Text style={styles.userEmail}>{userEmail}</Text>
+            {loadingProfile ? (
+              <ActivityIndicator />
+            ) : (
+              <>
+                <Text style={styles.userName}>{userName}</Text>
+                <Text style={styles.userEmail}>{userEmail}</Text>
+              </>
+            )}
 
             <View style={styles.chipsRow}>
               <View style={styles.memberChip}>
-                <Ionicons
-                  name="sparkles-outline"
-                  size={14}
-                  color="#1D4ED8"
-                />
+                <Ionicons name="sparkles-outline" size={14} color="#1D4ED8" />
                 <Text style={styles.memberChipText}>Member</Text>
               </View>
             </View>
@@ -235,7 +318,6 @@ const ProfileScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* CARD DE OPCIONES con secciones expandibles */}
         <View style={styles.optionsCard}>
           {PROFILE_OPTIONS.map((opt, index) => {
             const isOpen = openSection === opt.id;
@@ -270,8 +352,7 @@ const ProfileScreen: React.FC = () => {
           })}
         </View>
 
-        {/* LOG OUT */}
-        <TouchableOpacity style={styles.logoutButton}>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Ionicons
             name="log-out-outline"
             size={20}
@@ -305,12 +386,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  backButton: {
-    width: 24,
-    height: 24,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   headerTitle: {
     fontSize: 22,
     fontWeight: "800",
@@ -319,60 +394,47 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-
-  // CARD PERFIL
   profileCard: {
-    flexDirection: "row",
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 16,
-    marginTop: 16,
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 12,
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "center",
   },
   avatarSection: {
-    marginRight: 16,
-    alignItems: "center",
-    justifyContent: "center",
+    position: "relative",
   },
   avatarCircle: {
     width: 72,
     height: 72,
-    borderRadius: 36,
+    borderRadius: 999,
     backgroundColor: "#EFF6FF",
     alignItems: "center",
     justifyContent: "center",
   },
   editAvatarButton: {
     position: "absolute",
-    bottom: -2,
-    right: -2,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "#DBEAFE",
-    alignItems: "center",
-    justifyContent: "center",
+    right: -6,
+    bottom: -6,
+    backgroundColor: "#fff",
+    borderRadius: 999,
+    padding: 6,
     borderWidth: 1,
-    borderColor: "#BFDBFE",
+    borderColor: "#E5E7EB",
   },
   profileInfo: {
     flex: 1,
-    justifyContent: "center",
   },
   userName: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "700",
     color: "#111827",
   },
   userEmail: {
-    fontSize: 13,
     color: "#6B7280",
-    marginTop: 2,
+    marginTop: 4,
   },
   chipsRow: {
     flexDirection: "row",
@@ -381,197 +443,166 @@ const styles = StyleSheet.create({
   memberChip: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 6,
     backgroundColor: "#EFF6FF",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
     borderRadius: 999,
   },
   memberChipText: {
-    fontSize: 12,
-    marginLeft: 4,
     color: "#1D4ED8",
-    fontWeight: "500",
+    fontWeight: "600",
   },
   editProfileBtn: {
-    marginTop: 10,
-    alignSelf: "flex-start",
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#1D4ED8",
-    paddingHorizontal: 16,
-    paddingVertical: 6,
+    marginTop: 8,
   },
   editProfileText: {
     color: "#1D4ED8",
-    fontWeight: "600",
-    fontSize: 13,
+    fontWeight: "700",
   },
 
-  // CARD OPCIONES
   optionsCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    marginBottom: 12,
   },
   optionRow: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 10,
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 8,
   },
   optionLeft: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 12,
   },
   optionIconWrapper: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "#EFF6FF",
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "#F3F4F6",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 10,
   },
   optionText: {
     fontSize: 15,
     color: "#111827",
   },
   divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: "#E5E7EB",
-    marginTop: 6,
+    height: 1,
+    backgroundColor: "#F3F4F6",
   },
 
-  // CONTENIDO EXPANDIDO
   sectionBody: {
-    paddingHorizontal: 10,
-    paddingBottom: 10,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
   },
   sectionText: {
-    fontSize: 13,
     color: "#4B5563",
-    marginBottom: 6,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontSize: 13,
-    marginBottom: 8,
-    backgroundColor: "#F9FAFB",
-  },
-  primarySmallBtn: {
-    marginTop: 4,
-    alignSelf: "flex-start",
-    backgroundColor: "#1D4ED8",
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-  },
-  primarySmallBtnText: {
-    color: "#FFFFFF",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  secondaryBtn: {
-    marginTop: 8,
-    alignSelf: "flex-start",
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#1D4ED8",
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-  },
-  secondaryBtnText: {
-    color: "#1D4ED8",
-    fontSize: 13,
-    fontWeight: "600",
   },
   tagRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
+    gap: 8,
+    marginTop: 8,
   },
   tagPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
     backgroundColor: "#EFF6FF",
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 999,
   },
   tagText: {
-    fontSize: 12,
     color: "#1D4ED8",
   },
   listItemRow: {
-    marginTop: 4,
+    marginTop: 8,
   },
   listItemTitle: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#111827",
+    fontWeight: "700",
   },
   listItemSubtitle: {
-    fontSize: 12,
     color: "#6B7280",
   },
-
-    cardRow: {
+  cardRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginTop: 4,
+    marginTop: 8,
   },
   cardText: {
-    fontSize: 13,
-    color: "#111827",
-    fontWeight: "500",
+    fontSize: 14,
+  },
+  secondaryBtn: {
+    marginTop: 8,
+  },
+  secondaryBtnText: {
+    color: "#1D4ED8",
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  primarySmallBtn: {
+    marginTop: 12,
+    backgroundColor: "#1D6FB5",
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  primarySmallBtnText: {
+    color: "#fff",
+    fontWeight: "700",
   },
 
+  // language / currency chips
+  chipsRowSmall: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 8,
+  },
   langChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 999,
+    backgroundColor: "#fff",
     borderWidth: 1,
-    borderColor: "#D1D5DB",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    marginRight: 6,
-    marginTop: 4,
-    backgroundColor: "#FFFFFF",
+    borderColor: "#E5E7EB",
   },
   langChipActive: {
     backgroundColor: "#EFF6FF",
     borderColor: "#1D4ED8",
   },
   langChipText: {
-    fontSize: 12,
-    color: "#4B5563",
+    color: "#374151",
   },
   langChipTextActive: {
-    fontSize: 12,
     color: "#1D4ED8",
-    fontWeight: "600",
+    fontWeight: "700",
   },
 
-  // LOG OUT
   logoutButton: {
-    marginTop: 20,
-    backgroundColor: "#FEF2F2",
-    borderRadius: 999,
-    paddingVertical: 10,
-    alignItems: "center",
-    justifyContent: "center",
+    marginTop: 12,
     flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    backgroundColor: "#fff",
+    borderRadius: 12,
   },
   logoutText: {
-    fontSize: 15,
-    fontWeight: "600",
     color: "#B91C1C",
+    fontWeight: "700",
+  },
+
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
