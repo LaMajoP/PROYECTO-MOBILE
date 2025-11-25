@@ -1,5 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { Modal, View, TouchableOpacity, Image, Text, StyleSheet, ScrollView } from "react-native";
+import {
+  Modal,
+  View,
+  TouchableOpacity,
+  Image,
+  Text,
+  StyleSheet,
+  ScrollView,
+} from "react-native";
 
 const STYLES = [
   "adventurer",
@@ -9,7 +17,7 @@ const STYLES = [
   "croodles",
   "fun-emoji",
   "lorelei",
-  "pixel-art"
+  "pixel-art",
 ];
 
 // Paleta pastel suave
@@ -48,7 +56,10 @@ export default function AvatarPickerModal({ visible, onClose, onSelect }) {
               <TouchableOpacity
                 key={url}
                 style={styles.avatarWrapper}
-                onPress={() => onSelect(url)}
+                onPress={() => {
+                  console.log("🎨 Avatar elegido:", url);
+                  onSelect(url); // <-- ESTA ES LA LÍNEA CORRECTA
+                }}
               >
                 <Image source={{ uri: url }} style={styles.avatarImg} />
               </TouchableOpacity>

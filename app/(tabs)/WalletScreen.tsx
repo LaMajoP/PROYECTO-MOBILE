@@ -1,351 +1,303 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import {
   SafeAreaView,
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
+  Image,
+  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { supabase } from "../../lib/supabaseClient";
 
-type Transaction = {
-  id: string;
-  title: string;
-  date: string;
-  amount: number; // positivo siempre
-  type: "in" | "out"; // in = entra dinero, out = sale dinero
-};
+const OrderHistoryScreen = () => {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-const TRANSACTIONS: Transaction[] = [
-  {
-    id: "1",
-    title: "Deposit from card",
-    date: "2025-11-10",
-    amount: 120.5,
-    type: "in",
-  },
-  {
-    id: "2",
-    title: "Order #8345",
-    date: "2025-11-11",
-    amount: 27.959,
-    type: "out",
-  },
-  {
-    id: "3",
-    title: "Order #8291",
-    date: "2025-11-12",
-    amount: 19.118,
-    type: "out",
-  },
-  {
-    id: "4",
-    title: "Refund",
-    date: "2025-11-13",
-    amount: 15.0,
-    type: "in",
-  },
-];
-
-const WalletScreen: React.FC = () => {
-  // saldo = entradas - salidas
-  const balance = useMemo(() => {
-    return TRANSACTIONS.reduce((total, tx) => {
-      if (tx.type === "in") return total + tx.amount;
-      return total - tx.amount;
-    }, 0);
+  useEffect(() => {
+    loadOrders();
   }, []);
 
-  const formatAmount = (value: number) => value.toFixed(3);
+  const loadOrders = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from("orders")
+      .select(`
+        id,
+        created_at,
+        total,
+        country,
+        locker_type,
+        locker_price,
+        status,
+        order_items (
+          quantity,
+          unit_price,
+          subtotal,
+          product_name,
+          product_image
+        )
+      `)
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (error) console.log("❌ Error cargando órdenes:", error);
+
+    setOrders(data || []);
+    setLoading(false);
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadOrders();
+    setRefreshing(false);
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "#FCD34D"; // yellow
+      case "shipped":
+        return "#60A5FA"; // blue
+      case "delivered":
+        return "#4ADE80"; // green
+      case "cancelled":
+        return "#F87171"; // red
+      default:
+        return "#D1D5DB";
+    }
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <ActivityIndicator size="large" color="#1D6FB5" style={{ marginTop: 60 }} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
       {/* HEADER */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Wallet</Text>
-        <Text style={styles.headerSubtitle}>All your money in one place</Text>
+        <Text style={styles.headerTitle}>Order History</Text>
+        <Text style={styles.headerSubtitle}>Your recent purchases appear here</Text>
       </View>
 
+      {/* CONTENT */}
       <ScrollView
-        style={styles.content}
-        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+        contentContainerStyle={{ padding: 18, paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {/* TARJETA DE SALDO */}
-        <View style={styles.balanceCard}>
-          <View style={styles.balanceTopRow}>
-            <View style={styles.balanceIconWrapper}>
-              <Ionicons name="wallet-outline" size={24} color="#EFF6FF" />
-            </View>
-            <Text style={styles.balanceLabel}>Available balance</Text>
-          </View>
+        {orders.length === 0 && (
+          <Text style={styles.emptyText}>You have no orders yet 🛒</Text>
+        )}
 
-          <Text style={styles.balanceValue}>${formatAmount(balance)}</Text>
-
-          <View style={styles.balanceFooterRow}>
-            <View style={styles.balanceChip}>
-              <Ionicons name="shield-checkmark-outline" size={14} color="#BFDBFE" />
-              <Text style={styles.balanceChipText}>Protected payments</Text>
-            </View>
-            <Text style={styles.balanceUpdated}>Updated just now</Text>
-          </View>
-        </View>
-
-        {/* BOTONES DE ACCIÓN */}
-        <View style={styles.actionsRow}>
-          <TouchableOpacity style={styles.actionButtonPrimary}>
-            <Ionicons
-              name="add-circle-outline"
-              size={18}
-              color="#FFFFFF"
-              style={{ marginRight: 6 }}
-            />
-            <Text style={styles.actionTextPrimary}>Add funds</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.actionButtonSecondary}>
-            <Ionicons
-              name="arrow-down-circle-outline"
-              size={18}
-              color="#1D4ED8"
-              style={{ marginRight: 6 }}
-            />
-            <Text style={styles.actionTextSecondary}>Withdraw</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* LISTA DE TRANSACCIONES */}
-        <Text style={styles.sectionTitle}>Recent activity</Text>
-
-        <View style={styles.transactionsCard}>
-          {TRANSACTIONS.map((tx, index) => {
-            const isIn = tx.type === "in";
-            const sign = isIn ? "+" : "-";
-            const amountColor = isIn ? "#16A34A" : "#DC2626";
-            const iconName: keyof typeof Ionicons.glyphMap = isIn
-              ? "arrow-down-circle-outline"
-              : "arrow-up-circle-outline";
-            const iconBg = isIn ? "#DCFCE7" : "#FEE2E2";
-            const iconColor = isIn ? "#15803D" : "#B91C1C";
-
-            return (
-              <View key={tx.id}>
-                <View style={styles.txRow}>
-                  <View style={styles.txLeft}>
-                    <View
-                      style={[
-                        styles.txIconWrapper,
-                        { backgroundColor: iconBg },
-                      ]}
-                    >
-                      <Ionicons name={iconName} size={18} color={iconColor} />
-                    </View>
-
-                    <View>
-                      <Text style={styles.txTitle}>{tx.title}</Text>
-                      <Text style={styles.txDate}>{tx.date}</Text>
-                    </View>
-                  </View>
-
-                  <Text style={[styles.txAmount, { color: amountColor }]}>
-                    {sign}${formatAmount(tx.amount)}
-                  </Text>
-                </View>
-
-                {index < TRANSACTIONS.length - 1 && (
-                  <View style={styles.txDivider} />
-                )}
+        {/* ORDER CARDS */}
+        {orders.map((order) => (
+          <View key={order.id} style={styles.orderCard}>
+            
+            {/* TOP SECTION */}
+            <View style={styles.orderHeaderRow}>
+              <View>
+                <Text style={styles.orderId}>Order #{order.id.slice(0, 6)}</Text>
+                <Text style={styles.orderDate}>
+                  {new Date(order.created_at).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </Text>
               </View>
-            );
-          })}
-        </View>
+
+              <View
+                style={[
+                  styles.statusBadge,
+                  { backgroundColor: getStatusColor(order.status) },
+                ]}
+              >
+                <Text style={styles.statusBadgeText}>{order.status}</Text>
+              </View>
+            </View>
+
+            {/* PRICE */}
+            <Text style={styles.orderTotal}>Total: ${order.total.toFixed(2)}</Text>
+
+            {/* COUNTRY & LOCKER */}
+            <View style={styles.infoRow}>
+              <Ionicons name="earth-outline" size={16} color="#1D4ED8" />
+              <Text style={styles.infoText}>{order.country}</Text>
+            </View>
+
+            <View style={styles.infoRow}>
+              <Ionicons name="cube-outline" size={16} color="#1D4ED8" />
+              <Text style={styles.infoText}>
+                Locker: {order.locker_type} (${order.locker_price})
+              </Text>
+            </View>
+
+            <View style={styles.divider} />
+
+            {/* ITEMS */}
+            <Text style={styles.itemsTitle}>Items</Text>
+
+            {order.order_items.map((item, index) => (
+              <View key={index} style={styles.itemRow}>
+                <Image
+                  source={{ uri: item.product_image }}
+                  style={styles.itemImage}
+                />
+
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.itemName}>{item.product_name}</Text>
+                  <Text style={styles.itemQty}>
+                    {item.quantity} × ${item.unit_price}
+                  </Text>
+                  <Text style={styles.itemSubtotal}>Subtotal: ${item.subtotal.toFixed(2)}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        ))}
       </ScrollView>
     </SafeAreaView>
   );
 };
 
-export default WalletScreen;
+export default OrderHistoryScreen;
 
+/* ======================================================
+      STYLES
+====================================================== */
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#E5ECFF", // azul muy clarito
-  },
+  safeArea: { flex: 1, backgroundColor: "#E5ECFF" },
+
   header: {
     backgroundColor: "#1D6FB5",
-    paddingHorizontal: 16,
-    paddingTop: 18,
-    paddingBottom: 18,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
-    alignItems: "center",
+    paddingVertical: 26,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    marginBottom: 10,
   },
+
   headerTitle: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#FFFFFF",
+    fontSize: 26,
+    fontWeight: "900",
+    color: "white",
   },
   headerSubtitle: {
+    color: "#DCEAFE",
     marginTop: 4,
-    color: "#DBEAFE",
     fontSize: 13,
   },
-  content: {
-    flex: 1,
-  },
 
-  // BALANCE CARD
-  balanceCard: {
-    backgroundColor: "#1D4ED8",
-    borderRadius: 20,
-    padding: 18,
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 5,
-  },
-  balanceTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  balanceIconWrapper: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#3B82F6",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 10,
-    backgroundColor: "#1E40AF",
-  },
-  balanceLabel: {
-    fontSize: 14,
-    color: "#DBEAFE",
-  },
-  balanceValue: {
-    fontSize: 32,
-    fontWeight: "800",
-    color: "#EFF6FF",
-    marginBottom: 12,
-  },
-  balanceFooterRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  balanceChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(219, 234, 254, 0.16)",
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  balanceChipText: {
-    fontSize: 12,
-    color: "#BFDBFE",
-    marginLeft: 4,
-  },
-  balanceUpdated: {
-    fontSize: 11,
-    color: "#BFDBFE",
-  },
-
-  // ACTIONS
-  actionsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 20,
-    gap: 12,
-  },
-  actionButtonPrimary: {
-    flex: 1,
-    backgroundColor: "#1D4ED8",
-    paddingVertical: 12,
-    borderRadius: 999,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-  },
-  actionButtonSecondary: {
-    flex: 1,
-    backgroundColor: "#EFF6FF",
-    paddingVertical: 12,
-    borderRadius: 999,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    borderWidth: 1,
-    borderColor: "#1D4ED8",
-  },
-  actionTextPrimary: {
-    color: "#FFFFFF",
-    fontWeight: "600",
-    fontSize: 15,
-  },
-  actionTextSecondary: {
-    color: "#1D4ED8",
-    fontWeight: "600",
-    fontSize: 15,
-  },
-
-  // TRANSACTIONS
-  sectionTitle: {
+  emptyText: {
+    marginTop: 50,
+    textAlign: "center",
     fontSize: 16,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 8,
+    color: "#6B7280",
   },
-  transactionsCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+
+  orderCard: {
+    backgroundColor: "white",
+    padding: 18,
+    borderRadius: 20,
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
     shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
     elevation: 3,
   },
-  txRow: {
+
+  orderHeaderRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 8,
   },
-  txLeft: {
+
+  orderId: { fontSize: 16, fontWeight: "700", color: "#1F2937" },
+  orderDate: { fontSize: 13, color: "#6B7280", marginTop: 2 },
+
+  statusBadge: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 50,
+  },
+  statusBadgeText: {
+    color: "white",
+    fontWeight: "700",
+    fontSize: 12,
+    textTransform: "capitalize",
+  },
+
+  orderTotal: {
+    marginTop: 10,
+    fontSize: 17,
+    fontWeight: "800",
+    color: "#1D4ED8",
+  },
+
+  infoRow: {
     flexDirection: "row",
     alignItems: "center",
+    marginTop: 6,
   },
-  txIconWrapper: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 10,
+  infoText: {
+    marginLeft: 6,
+    fontSize: 13,
+    color: "#374151",
   },
-  txTitle: {
+
+  divider: {
+    height: 1,
+    backgroundColor: "#E5E7EB",
+    marginVertical: 14,
+  },
+
+  itemsTitle: {
     fontSize: 14,
-    fontWeight: "500",
-    color: "#111827",
+    fontWeight: "700",
+    color: "#374151",
+    marginBottom: 8,
   },
-  txDate: {
-    fontSize: 12,
+
+  itemRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  itemImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 12,
+    marginRight: 12,
+  },
+  itemName: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  itemQty: {
+    fontSize: 13,
     color: "#6B7280",
     marginTop: 2,
   },
-  txAmount: {
-    fontSize: 15,
+  itemSubtotal: {
+    fontSize: 13,
+    color: "#1D4ED8",
+    marginTop: 2,
     fontWeight: "700",
-  },
-  txDivider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: "#E5E7EB",
   },
 });

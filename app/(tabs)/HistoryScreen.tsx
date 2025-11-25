@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   SafeAreaView,
   View,
@@ -6,155 +6,334 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  Image,
+  RefreshControl,
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { supabase } from "../../lib/supabaseClient";
 
-type CartItem = {
+/* ======================================================
+      TIPOS
+====================================================== */
+type CartRow = {
   id: string;
-  name: string;
-  unitPrice: number; // precio unitario
+  product_id: string;
   quantity: number;
+  unit_price: number;
+  added_at: string;
+  products: {
+    name: string;
+    image_url: string | null;
+    stock?: number;
+  };
 };
 
-const INITIAL_CART: CartItem[] = [
-  {
-    id: "1",
-    name: "Cute Lamb Ears Hairband",
-    unitPrice: 19.118,
-    quantity: 1,
-  },
-  {
-    id: "2",
-    name: "Stitch Plush Toy",
-    unitPrice: 71.756,
-    quantity: 1,
-  },
-  {
-    id: "3",
-    name: "Pink Strawberry Bunny",
-    unitPrice: 27.959,
-    quantity: 2,
-  },
-];
-
 const HistoryScreen: React.FC = () => {
-  const [cart, setCart] = useState<CartItem[]>(INITIAL_CART);
+  const [cart, setCart] = useState<CartRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [checkingOut, setCheckingOut] = useState(false);
+  const [refreshing, setRefreshing] = useState(false); // 🟦 nuevo
 
-  const itemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const subtitle = itemsCount === 1 ? "1 item in your cart" : `${itemsCount} items in your cart`;
+  /* ======================================================
+      1. CARGAR CARRITO REAL DESDE SUPABASE
+  ====================================================== */
+  const loadCart = async () => {
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) return;
 
+    const { data, error } = await supabase
+      .from("cart_items")
+      .select(`
+        id,
+        product_id,
+        quantity,
+        unit_price,
+        added_at,
+        products:fk_cart_product (
+          name,
+          image_url,
+          stock
+        )
+      `)
+      .eq("user_id", auth.user.id);
+
+    if (error) {
+      console.log("❌ Error cargando carrito:", error);
+      return;
+    }
+
+    setCart(data);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadCart();
+  }, []);
+
+  /* ======================================================
+      2. PULL TO REFRESH
+  ====================================================== */
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadCart();
+    setRefreshing(false);
+  };
+
+  /* ======================================================
+      3. CAMBIAR CANTIDAD
+  ====================================================== */
+  const handleChangeQuantity = async (id: string, delta: 1 | -1) => {
+    const item = cart.find((x) => x.id === id);
+    if (!item) return;
+
+    // mínima cantidad permitida: 1
+    if (delta === -1 && item.quantity === 1) return;
+
+    // máxima cantidad = stock (si existe)
+    if (delta === 1 && item.products.stock && item.quantity >= item.products.stock) {
+      Alert.alert("Stock insuficiente", "No puedes agregar más unidades.");
+      return;
+    }
+
+    const newQty = Math.max(1, item.quantity + delta);
+
+    await supabase.from("cart_items").update({ quantity: newQty }).eq("id", id);
+
+    loadCart();
+  };
+
+  /* ======================================================
+      4. ELIMINAR ITEM
+  ====================================================== */
+  const deleteItem = async (id: string) => {
+    await supabase.from("cart_items").delete().eq("id", id);
+    loadCart();
+  };
+
+  /* ======================================================
+      5. TOTAL FINAL
+  ====================================================== */
   const totalAmount = useMemo(
-    () =>
-      cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
+    () => cart.reduce((sum, item) => sum + item.unit_price * item.quantity, 0),
     [cart]
   );
 
-  const handleChangeQuantity = (id: string, delta: 1 | -1) => {
-    setCart((prev) =>
-      prev.map((item) => {
-        if (item.id !== id) return item;
-        const newQty = Math.max(1, item.quantity + delta); // mínimo 1
-        return { ...item, quantity: newQty };
-      })
-    );
+  const formatPrice = (v: number) => v.toFixed(3);
+
+  /* ======================================================
+      6. CHECKOUT REAL (ACTUALIZADO CON DETALLES)
+  ====================================================== */
+  const handleCheckout = async () => {
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) return;
+
+    if (cart.length === 0) {
+      Alert.alert("Carrito vacío", "Agrega productos antes de pagar.");
+      return;
+    }
+
+    /* 1️⃣ Validar stock */
+    for (let item of cart) {
+      const { data: product } = await supabase
+        .from("products")
+        .select("stock")
+        .eq("id", item.product_id)
+        .single();
+
+      if (!product || product.stock < item.quantity) {
+        Alert.alert(
+          "Stock insuficiente",
+          `Solo hay ${product?.stock ?? 0} unidades de "${item.products.name}"`
+        );
+        return;
+      }
+    }
+
+    setCheckingOut(true);
+
+    /* 2️⃣ Crear orden */
+    const { data: order, error: orderErr } = await supabase
+      .from("orders")
+      .insert([
+        {
+          user_id: auth.user.id,
+          total: totalAmount,
+          status: "pending",
+          country: "Colombia",
+          locker_type: "fast",
+          locker_price: 12.99,
+        },
+      ])
+      .select()
+      .single();
+
+    if (orderErr) {
+      setCheckingOut(false);
+      console.log("❌ Error creando orden:", orderErr);
+      return;
+    }
+
+    /* 3️⃣ Insertar order_items con detalles del producto */
+    const orderItems = cart.map((item) => ({
+      order_id: order.id,
+      product_id: item.product_id,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      subtotal: item.unit_price * item.quantity,
+
+      // 🆕 campos de detalle sacados de products
+      product_name: item.products.name,
+      product_image: item.products.image_url,
+      product_description: item.products.description ?? null,
+    }));
+
+    const { error: orderItemsErr } = await supabase
+      .from("order_items")
+      .insert(orderItems);
+
+    if (orderItemsErr) {
+      console.log("❌ Error insertando order_items:", orderItemsErr);
+    }
+
+    /* 4️⃣ Registrar purchase_history */
+    const purchaseRows = cart.map((item) => ({
+      user_id: auth.user.id,
+      product_id: item.product_id,
+      paid_price: item.unit_price,
+      country: order.country,
+      locker_type: order.locker_type,
+      locker_price: order.locker_price,
+      total: item.unit_price * item.quantity,
+    }));
+
+    await supabase.from("purchase_history").insert(purchaseRows);
+
+    /* 5️⃣ Actualizar stock */
+    for (let item of cart) {
+      await supabase
+        .from("products")
+        .update({ stock: item.products.stock - item.quantity })
+        .eq("id", item.product_id);
+    }
+
+    /* 6️⃣ Vaciar carrito */
+    await supabase.from("cart_items").delete().eq("user_id", auth.user.id);
+
+    setCheckingOut(false);
+    Alert.alert("Éxito", "Tu orden fue creada correctamente.");
+
+    loadCart();
   };
 
-  const formatPrice = (value: number) => value.toFixed(3);
+  /* ======================================================
+      UI
+  ====================================================== */
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <ActivityIndicator size="large" color="#1D6FB5" style={{ marginTop: 60 }} />
+      </SafeAreaView>
+    );
+  }
+
+  const itemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* HEADER estilo Wallet/Profile */}
+      {/* HEADER */}
       <View style={styles.header}>
-        <View style={styles.headerRow}>
-          <TouchableOpacity style={styles.backButton}>
-            <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-
-          <Text style={styles.headerTitle}>Shopping Cart</Text>
-
-          <View style={{ width: 24 }} />
-        </View>
-
-        <Text style={styles.headerSubtitle}>{subtitle}</Text>
+        <Text style={styles.headerTitle}>Shopping Cart</Text>
+        <Text style={styles.headerSubtitle}>
+          {itemsCount === 1 ? "1 item" : `${itemsCount} items`} in your cart
+        </Text>
       </View>
 
       {/* CONTENIDO */}
       <ScrollView
         style={styles.content}
         contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
-        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#1D6FB5"
+          />
+        }
       >
-        {/* RESUMEN TOTAL */}
+        {/* TOTAL */}
         <View style={styles.summaryCard}>
-          <View style={styles.summaryLeft}>
-            <View style={styles.summaryIconWrapper}>
-              <Ionicons name="cart-outline" size={22} color="#EFF6FF" />
-            </View>
-            <View>
-              <Text style={styles.summaryLabel}>Total</Text>
-              <Text style={styles.summaryHint}>Including all items</Text>
-            </View>
-          </View>
-
+          <Text style={styles.summaryLabel}>Total</Text>
           <Text style={styles.summaryAmount}>${formatPrice(totalAmount)}</Text>
         </View>
 
-        {/* ITEMS DEL CARRITO */}
-        <View style={styles.itemsContainer}>
-          {cart.map((item) => {
-            const totalPrice = item.unitPrice * item.quantity;
+        {/* ITEMS */}
+        {cart.map((item) => {
+          const totalLine = item.unit_price * item.quantity;
 
-            return (
-              <View key={item.id} style={styles.itemCard}>
-                {/* Imagen placeholder */}
-                <View style={styles.imagePlaceholder} />
+          return (
+            <View key={item.id} style={styles.itemCard}>
+              <Image source={{ uri: item.products?.image_url }} style={styles.image} />
 
-                {/* Info del producto */}
-                <View style={styles.itemInfo}>
-                  <Text style={styles.itemName}>{item.name}</Text>
-                  <Text style={styles.itemPrice}>
-                    ${formatPrice(totalPrice)}
-                  </Text>
+              <View style={styles.itemInfo}>
+                <Text style={styles.itemName}>{item.products?.name}</Text>
+                <Text style={styles.itemPrice}>${formatPrice(totalLine)}</Text>
 
-                  {/* Controles de cantidad */}
-                  <View style={styles.qtyRow}>
-                    <TouchableOpacity
-                      style={styles.qtyButton}
-                      onPress={() => handleChangeQuantity(item.id, -1)}
-                    >
-                      <Text style={styles.qtyButtonText}>−</Text>
-                    </TouchableOpacity>
+                {/* CONTROLES */}
+                <View style={styles.qtyRow}>
+                  {/* BOTÓN − */}
+                  <TouchableOpacity
+                    style={[
+                      styles.qtyButton,
+                      item.quantity <= 1 && { opacity: 0.4 },
+                    ]}
+                    disabled={item.quantity <= 1}
+                    onPress={() => handleChangeQuantity(item.id, -1)}
+                  >
+                    <Text style={styles.qtyButtonText}>−</Text>
+                  </TouchableOpacity>
 
-                    <View style={styles.qtyValueBox}>
-                      <Text style={styles.qtyValueText}>{item.quantity}</Text>
-                    </View>
-
-                    <TouchableOpacity
-                      style={styles.qtyButton}
-                      onPress={() => handleChangeQuantity(item.id, +1)}
-                    >
-                      <Text style={styles.qtyButtonText}>+</Text>
-                    </TouchableOpacity>
+                  <View style={styles.qtyValueBox}>
+                    <Text style={styles.qtyValueText}>{item.quantity}</Text>
                   </View>
 
-                  <Text style={styles.unitPriceText}>
-                    Unit price: ${formatPrice(item.unitPrice)}
-                  </Text>
+                  {/* BOTÓN + */}
+                  <TouchableOpacity
+                    style={[
+                      styles.qtyButton,
+                      item.products.stock &&
+                        item.quantity >= item.products.stock && { opacity: 0.4 },
+                    ]}
+                    disabled={
+                      item.products.stock &&
+                      item.quantity >= item.products.stock
+                    }
+                    onPress={() => handleChangeQuantity(item.id, +1)}
+                  >
+                    <Text style={styles.qtyButtonText}>+</Text>
+                  </TouchableOpacity>
                 </View>
-              </View>
-            );
-          })}
-        </View>
 
-        {/* BOTÓN CHECKOUT (visual por ahora) */}
-        <TouchableOpacity style={styles.checkoutButton}>
-          <Ionicons
-            name="card-outline"
-            size={20}
-            color="#FFFFFF"
-            style={{ marginRight: 8 }}
-          />
-          <Text style={styles.checkoutText}>Proceed to checkout</Text>
+                <TouchableOpacity onPress={() => deleteItem(item.id)}>
+                  <Text style={{ color: "red", marginTop: 4 }}>Remove</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          );
+        })}
+
+        {/* CHECKOUT */}
+        <TouchableOpacity
+          style={styles.checkoutButton}
+          onPress={handleCheckout}
+          disabled={checkingOut}
+        >
+          <Ionicons name="card-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+          <Text style={styles.checkoutText}>
+            {checkingOut ? "Processing..." : "Proceed to checkout"}
+          </Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -163,178 +342,96 @@ const HistoryScreen: React.FC = () => {
 
 export default HistoryScreen;
 
+/* ======================================================
+      ESTILOS
+====================================================== */
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#E5ECFF", // mismo fondo azulado que Wallet/Profile
-  },
+  safeArea: { flex: 1, backgroundColor: "#E5ECFF" },
+
   header: {
     backgroundColor: "#1D6FB5",
-    paddingHorizontal: 16,
-    paddingTop: 18,
-    paddingBottom: 18,
+    padding: 18,
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  backButton: {
-    width: 24,
-    height: 24,
-    alignItems: "center",
-    justifyContent: "center",
   },
   headerTitle: {
     fontSize: 22,
     fontWeight: "800",
     color: "#FFFFFF",
   },
-  headerSubtitle: {
-    marginTop: 4,
-    color: "#DBEAFE",
-    fontSize: 13,
-  },
-  content: {
-    flex: 1,
-  },
+  headerSubtitle: { color: "#DBEAFE", marginTop: 4 },
 
-  // RESUMEN
+  content: { flex: 1 },
+
   summaryCard: {
     backgroundColor: "#1D4ED8",
-    borderRadius: 20,
     padding: 16,
-    marginTop: 12,
-    marginBottom: 16,
+    borderRadius: 16,
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 5,
+    marginBottom: 20,
   },
-  summaryLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  summaryIconWrapper: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#3B82F6",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 10,
-    backgroundColor: "#1E40AF",
-  },
-  summaryLabel: {
-    fontSize: 14,
-    color: "#DBEAFE",
-    fontWeight: "500",
-  },
-  summaryHint: {
-    fontSize: 12,
-    color: "#BFDBFE",
-  },
+  summaryLabel: { color: "#DBEAFE" },
   summaryAmount: {
     fontSize: 22,
-    fontWeight: "800",
     color: "#EFF6FF",
+    fontWeight: "800",
   },
 
-  // ITEMS
-  itemsContainer: {
-    gap: 12,
-  },
   itemCard: {
     flexDirection: "row",
     backgroundColor: "#FFFFFF",
-    borderRadius: 18,
+    borderRadius: 16,
     padding: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
+    marginBottom: 14,
   },
-  imagePlaceholder: {
-    width: 90,
-    height: 90,
-    borderRadius: 12,
+  image: {
+    width: 80,
+    height: 80,
     backgroundColor: "#E5E7EB",
+    borderRadius: 12,
     marginRight: 12,
   },
-  itemInfo: {
-    flex: 1,
-    justifyContent: "space-between",
-  },
-  itemName: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#111827",
-  },
-  itemPrice: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#111827",
-    marginTop: 4,
-    marginBottom: 6,
-  },
-  qtyRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 4,
-  },
+  itemInfo: { flex: 1 },
+  itemName: { fontSize: 15, fontWeight: "600" },
+  itemPrice: { fontSize: 16, fontWeight: "800", marginTop: 4 },
+
+  qtyRow: { flexDirection: "row", marginTop: 6 },
   qtyButton: {
     borderWidth: 1,
     borderColor: "#1D4ED8",
     borderRadius: 6,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     paddingVertical: 4,
-    backgroundColor: "#EFF6FF",
   },
   qtyButtonText: {
-    fontSize: 16,
     color: "#1D4ED8",
+    fontSize: 16,
     fontWeight: "600",
   },
   qtyValueBox: {
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    borderRadius: 6,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 4,
     marginHorizontal: 4,
-    backgroundColor: "#FFFFFF",
+    borderRadius: 6,
+    backgroundColor: "#FFF",
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
   },
-  qtyValueText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#111827",
-  },
-  unitPriceText: {
-    fontSize: 12,
-    color: "#6B7280",
-  },
+  qtyValueText: { fontWeight: "600" },
 
-  // CHECKOUT
   checkoutButton: {
-    marginTop: 20,
+    marginTop: 16,
     backgroundColor: "#1D4ED8",
     borderRadius: 999,
     paddingVertical: 12,
     alignItems: "center",
-    justifyContent: "center",
     flexDirection: "row",
+    justifyContent: "center",
   },
   checkoutText: {
-    fontSize: 15,
-    fontWeight: "600",
     color: "#FFFFFF",
+    fontWeight: "600",
+    fontSize: 15,
   },
 });

@@ -54,23 +54,35 @@ export default function HelpChatModal({ visible, onClose }: HelpChatModalProps) 
   const slideAnim = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef<ScrollView>(null);
 
+  /* --------------------- LOG VISIBILIDAD --------------------- */
   useEffect(() => {
+    console.log("📌 HelpChatModal visible:", visible);
+
     if (visible) {
       Animated.timing(slideAnim, {
         toValue: 1,
         duration: 300,
         useNativeDriver: true,
       }).start();
+
+      console.log("📌 Modal animado y abierto.");
     } else {
       slideAnim.setValue(0);
       setMessages([]);
+      console.log("📌 Modal cerrado y mensajes limpiados.");
     }
   }, [visible]);
 
+  /* --------------------- ENVÍO DE MENSAJE --------------------- */
   const sendMessage = async () => {
-    if (!input.trim() || loading) return;
+    if (!input.trim() || loading) {
+      console.log("⚠️ No envía mensaje (input vacío o loading en true)");
+      return;
+    }
 
     const userMsg = input.trim();
+    console.log("✉️ Usuario envía:", userMsg);
+
     setMessages((prev) => [...prev, { sender: "user", text: userMsg }]);
     setInput("");
     setLoading(true);
@@ -85,30 +97,40 @@ export default function HelpChatModal({ visible, onClose }: HelpChatModalProps) 
             ],
           },
         ],
-        generationConfig: {
-          responseMimeType: "text/plain",
-        },
+        generationConfig: { responseMimeType: "text/plain" },
       };
+
+      console.log("📤 Enviando request a Gemini:", body);
+
+      const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
+      console.log("🔑 API KEY cargada:", apiKey ? "OK" : "❌ NO DEFINIDA");
 
       const response = await fetch(
         "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
         {
           method: "POST",
           headers: {
-            "x-goog-api-key": process.env.EXPO_PUBLIC_GEMINI_API_KEY ?? "",
+            "x-goog-api-key": apiKey ?? "",
             "Content-Type": "application/json",
           },
           body: JSON.stringify(body),
         }
       );
 
+      console.log("📥 Respuesta HTTP status:", response.status);
+
       const data = await response.json();
+      console.log("📄 JSON recibido de la API:", data);
+
       const aiText =
         data?.candidates?.[0]?.content?.parts?.[0]?.text ??
         "Lo siento, no pude procesar tu solicitud.";
 
+      console.log("🤖 Texto generado por la IA:", aiText);
+
       setMessages((prev) => [...prev, { sender: "ai", text: aiText }]);
     } catch (e) {
+      console.log("❌ ERROR en fetch:", e);
       setMessages((prev) => [
         ...prev,
         { sender: "ai", text: "Hubo un error procesando tu mensaje." },
@@ -141,7 +163,12 @@ export default function HelpChatModal({ visible, onClose }: HelpChatModalProps) 
           <View style={styles.header}>
             <Text style={styles.headerText}>Ayuda</Text>
 
-            <TouchableOpacity onPress={onClose}>
+            <TouchableOpacity
+              onPress={() => {
+                console.log("❌ Modal cerrado por botón.");
+                onClose();
+              }}
+            >
               <Ionicons name="close" size={26} color="#fff" />
             </TouchableOpacity>
           </View>
@@ -166,9 +193,7 @@ export default function HelpChatModal({ visible, onClose }: HelpChatModalProps) 
                 <Text
                   style={[
                     styles.bubbleText,
-                    m.sender === "user"
-                      ? styles.userText
-                      : styles.aiText,
+                    m.sender === "user" ? styles.userText : styles.aiText,
                   ]}
                 >
                   {m.text}
@@ -189,7 +214,10 @@ export default function HelpChatModal({ visible, onClose }: HelpChatModalProps) 
               placeholder="Escribe tu duda aquí..."
               style={styles.input}
               value={input}
-              onChangeText={setInput}
+              onChangeText={(t) => {
+                console.log("⌨️ Input cambiado:", t);
+                setInput(t);
+              }}
             />
 
             <TouchableOpacity style={styles.sendBtn} onPress={sendMessage}>
@@ -201,6 +229,8 @@ export default function HelpChatModal({ visible, onClose }: HelpChatModalProps) 
     </Modal>
   );
 }
+
+/* --------------------- ESTILOS --------------------- */
 
 const styles = StyleSheet.create({
   overlay: {
