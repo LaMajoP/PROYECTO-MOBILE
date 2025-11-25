@@ -15,12 +15,6 @@ import { supabase } from "../../lib/supabaseClient";
 
 type LockerOption = "fast" | "cheap";
 
-const renderStars = (rating: number) => {
-  const full = "★".repeat(rating);
-  const empty = "☆".repeat(5 - rating);
-  return full + empty;
-};
-
 const COUNTRIES = [
   { flag: "🇨🇴", name: "Colombia" },
   { flag: "🇲🇽", name: "México" },
@@ -52,7 +46,9 @@ const ProductDetailScreen: React.FC = () => {
 
   const [totalPrice, setTotalPrice] = useState<number | null>(null);
 
-  /* 1. Cargar producto */
+  /* ======================================================
+        1. LOAD PRODUCT
+  ====================================================== */
   useEffect(() => {
     const loadProduct = async () => {
       const { data } = await supabase
@@ -69,17 +65,14 @@ const ProductDetailScreen: React.FC = () => {
     loadProduct();
   }, [id]);
 
-  /* 2. Selección de lockers */
+  /* ======================================================
+        2. FETCH LOCKERS (con JSON seguro)
+  ====================================================== */
   const fetchLockers = async () => {
     try {
       setSelectingLockers(true);
 
-      const body = {
-        contents: [
-          {
-            parts: [
-              {
-                text: `
+      const prompt = `
 Devuelve SOLO este JSON EXACTO:
 {
   "fast": {
@@ -99,9 +92,12 @@ Devuelve SOLO este JSON EXACTO:
 }
 
 País destino: ${country}
-`,
-              },
-            ],
+`;
+
+      const body = {
+        contents: [
+          {
+            parts: [{ text: prompt }],
           },
         ],
       };
@@ -119,27 +115,75 @@ País destino: ${country}
       );
 
       const data = await response.json();
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+      const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
-      const cleaned = text.replace(/```json/g, "").replace(/```/g, "").trim();
-      const parsed = JSON.parse(cleaned);
+      if (!raw) throw new Error("Respuesta vacía del modelo");
+
+      // limpiar ```json ```
+      let cleaned = raw
+        .replace(/```json/g, "")
+        .replace(/```/g, "")
+        .trim();
+
+      let parsed;
+
+      try {
+        parsed = JSON.parse(cleaned);
+      } catch (_) {
+        // intentar extraer objeto JSON válido
+        const match = cleaned.match(/\{[\s\S]*\}/);
+        if (match) {
+          parsed = JSON.parse(match[0]);
+        } else {
+          throw new Error("JSON inválido devuelto por Gemini");
+        }
+      }
+
+      if (!parsed?.fast || !parsed?.cheap) {
+        throw new Error("JSON incompleto");
+      }
 
       setLockers(parsed);
       setTotalPrice(product.price + parsed.fast.price);
     } catch (err) {
-      console.log("🔥 ERROR:", err);
+      console.log("🔥 ERROR JSON LOCKERS:", err);
+
+      // Fallback local
+      const fallback = {
+        fast: {
+          title: "Faster delivery",
+          flag: "🇧🇷",
+          location: "São Paulo",
+          days: "7–12 days",
+          price: 12.99,
+        },
+        cheap: {
+          title: "Lower cost",
+          flag: "🇲🇽",
+          location: "Cancún",
+          days: "10–18 days",
+          price: 7.5,
+        },
+      };
+
+      setLockers(fallback);
+      setTotalPrice(product.price + fallback.fast.price);
     } finally {
       setSelectingLockers(false);
     }
   };
 
-  /* 3. Cambiar locker */
+  /* ======================================================
+        3. SELECT LOCKER
+  ====================================================== */
   const selectLocker = (type: LockerOption) => {
     setSelectedLocker(type);
     setTotalPrice(product.price + lockers[type].price);
   };
 
-  /* 4. Agregar al carrito */
+  /* ======================================================
+        4. ADD TO CART
+  ====================================================== */
   const addToCart = async () => {
     try {
       const {
@@ -181,6 +225,9 @@ País destino: ${country}
     }
   };
 
+  /* ======================================================
+        LOADING
+  ====================================================== */
   if (loadingProduct) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -189,6 +236,9 @@ País destino: ${country}
     );
   }
 
+  /* ======================================================
+        UI
+  ====================================================== */
   return (
     <SafeAreaView style={styles.safeArea}>
       {/* HEADER */}
@@ -208,7 +258,7 @@ País destino: ${country}
       <ScrollView style={styles.content}>
         <Text style={styles.productTitle}>{product.name}</Text>
 
-        {/* IMAGEN */}
+        {/* IMAGE */}
         <View style={styles.imageWrapper}>
           {product.image_url ? (
             <Image
@@ -222,18 +272,18 @@ País destino: ${country}
           )}
         </View>
 
-        {/* PRECIO */}
+        {/* PRICE */}
         <View style={styles.priceRow}>
           <Text style={styles.priceText}>${product.price}</Text>
         </View>
 
-        {/* DESCRIPCIÓN */}
+        {/* DESCRIPTION */}
         <View>
           <Text style={styles.sectionTitle}>Description</Text>
           <Text style={styles.descriptionText}>{product.description}</Text>
         </View>
 
-        {/* SELECTOR PAÍS */}
+        {/* COUNTRY SELECTOR */}
         <View style={styles.countryCard}>
           <Text style={styles.countryTitle}>Selecciona tu país</Text>
 
@@ -250,9 +300,7 @@ País destino: ${country}
                 <Text
                   style={[
                     styles.countryChipText,
-                    country === c.name
-                      ? { color: "#FFFFFF" }
-                      : { color: "#000000" },
+                    country === c.name ? { color: "#FFFFFF" } : { color: "#000000" },
                   ]}
                 >
                   {c.flag} {c.name}
@@ -309,12 +357,12 @@ País destino: ${country}
               </View>
             </View>
 
-            {/* TOTAL FINAL */}
+            {/* TOTAL */}
             <View style={styles.totalCard}>
               <Text style={styles.totalText}>Total: ${totalPrice}</Text>
             </View>
 
-            {/* BOTÓN AGREGAR AL CARRITO */}
+            {/* ADD TO CART */}
             <View style={{ marginTop: 20, marginBottom: 40 }}>
               <TouchableOpacity style={styles.addCartButton} onPress={addToCart}>
                 <Text style={styles.addCartText}>Agregar al carrito</Text>
@@ -330,8 +378,8 @@ País destino: ${country}
 export default ProductDetailScreen;
 
 /* =====================================================
-                        ESTILOS
-   ===================================================== */
+                        STYLES
+===================================================== */
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#F4F7FE" },
 
@@ -355,17 +403,26 @@ const styles = StyleSheet.create({
 
   content: { flex: 1, paddingHorizontal: 16, paddingBottom: 80 },
 
-  productTitle: { fontSize: 26, fontWeight: "800", color: "#111827", textAlign: "center", marginTop: 14, marginBottom: 12 },
+  productTitle: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: "#111827",
+    textAlign: "center",
+    marginTop: 14,
+    marginBottom: 12,
+  },
 
   imageWrapper: { alignItems: "center", marginBottom: 18 },
   imagePlaceholder: {
-    width: 240, height: 240, borderRadius: 20,
+    width: 240,
+    height: 240,
+    borderRadius: 20,
     backgroundColor: "#E5E7EB",
     alignItems: "center",
     justifyContent: "center",
   },
 
-  priceRow: { flexDirection: "row", justifyContent: "center", marginBottom: 4 },
+  priceRow: { flexDirection: "row", justifyContent: "center" },
   priceText: { fontSize: 28, fontWeight: "900", color: "#111827" },
 
   sectionTitle: { fontSize: 18, fontWeight: "700", color: "#111827", marginBottom: 6 },
@@ -399,10 +456,7 @@ const styles = StyleSheet.create({
   countryChipActive: {
     backgroundColor: "#1D6FB5",
   },
-  countryChipText: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
+  countryChipText: { fontSize: 14, fontWeight: "600" },
 
   primaryButton: {
     backgroundColor: "#1D6FB5",
@@ -443,6 +497,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
   },
+
   lockerSubtitle: { fontSize: 16, fontWeight: "700", marginBottom: 6, color: "#111827" },
   flagText: { fontSize: 30, marginBottom: 6 },
   lockerDesc: { fontSize: 13, color: "#4B5563" },
@@ -465,7 +520,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  /* BOTÓN CARRITO */
   addCartButton: {
     backgroundColor: "#1D6FB5",
     paddingVertical: 16,
