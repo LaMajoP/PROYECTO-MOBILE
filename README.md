@@ -30,7 +30,3 @@ GlobalLocker Marketplace es una plataforma diseñada para simular una experienci
 ### 6. Perfil y Soporte con IA (Profile & Support)
 * **Gestión de Perfil:** En la sección "My Profile" puedes visualizar tu información de usuario (correo y nombre) y personalizar tu experiencia cambiando tu foto de perfil o avatar.
 * **Asistente Inteligente:** Dentro de este menú encontrarás la opción **Help & Support**. Esta funcionalidad integra un chat con una **Inteligencia Artificial** diseñada para resolver tus dudas sobre la app y guiarte en cualquier paso del proceso.
-
----
-
-> **Nota:** Todas las transacciones, pagos y envíos dentro de GlobalLocker Marketplace son completamente simulados con fines educativos y de demostración.
